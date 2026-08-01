@@ -112,7 +112,7 @@ export default function EnrollmentWizard() {
 
     if (targetPose === 'LEFT') {
       targetX = W / 2 - 95; // Move circle to target LEFT
-      targetLabel = "Turn Left ➔"; // Mirrored camera means turn physical left moves cursor left
+      targetLabel = "Turn Left ➔"; 
     } else if (targetPose === 'RIGHT') {
       targetX = W / 2 + 95; // Move circle to target RIGHT
       targetLabel = "◀ Turn Right";
@@ -125,16 +125,16 @@ export default function EnrollmentWizard() {
     }
 
     // Draw active target guide ring
-    ctx.strokeStyle = isValid ? '#10b981' : '#38bdf8'; // Green if verified, else Sky Blue
+    ctx.strokeStyle = isValid ? '#10b981' : '#4f46e5'; // Green if verified, else Indigo
     ctx.lineWidth = 2.5;
     ctx.setLineDash([6, 4]); // Dashed circle
     ctx.beginPath();
     ctx.arc(targetX, targetY, 32, 0, 2 * Math.PI);
     ctx.stroke();
 
-    // Draw static center reference ring for guidance
+    // Draw static center reference ring for guidance (high-contrast dark line for light backgrounds)
     if (targetPose !== 'FRONT') {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.12)';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -145,8 +145,8 @@ export default function EnrollmentWizard() {
     ctx.setLineDash([]); // Reset dash
 
     // Draw Target direction labels
-    ctx.fillStyle = isValid ? '#10b981' : '#38bdf8';
-    ctx.font = 'bold 11px Plus Jakarta Sans, sans-serif';
+    ctx.fillStyle = isValid ? '#10b981' : '#4f46e5';
+    ctx.font = 'bold 11px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(targetLabel.toUpperCase(), targetX, targetY + 52);
 
@@ -174,7 +174,7 @@ export default function EnrollmentWizard() {
       ctx.fill();
 
       // Glowing outer ring on pointer
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(ptrX, ptrY, 11, 0, 2 * Math.PI);
@@ -182,9 +182,9 @@ export default function EnrollmentWizard() {
       
       // Draw connection line to target if not yet valid (guidance line)
       if (!isValid) {
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = 'rgba(79, 70, 229, 0.25)'; // Indigo guide path
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 3]);
         ctx.beginPath();
         ctx.moveTo(ptrX, ptrY);
         ctx.lineTo(targetX, targetY);
@@ -323,52 +323,52 @@ export default function EnrollmentWizard() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6 px-4">
+    <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
       {/* Top Header Card */}
-      <div className="glass-panel p-6 rounded-2xl mb-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <h2 className="text-2xl font-bold flex items-center gap-3 text-sky-400">
-          <UserPlus size={28} />
+      <div className="glass-panel p-6 rounded-2xl shadow-sm border border-slate-200/80 bg-white relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <h2 className="text-xl font-bold flex items-center gap-3 text-indigo-650">
+          <UserPlus size={24} className="text-indigo-650" />
           Multi-Pose Faculty Registration
         </h2>
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="text-slate-400 text-xs mt-1">
           Register new faculty. Move your head to place the **glowing pointer** inside the **target rings** on the camera.
         </p>
       </div>
 
       {step === 1 ? (
         /* STEP 1: METADATA FORM */
-        <div className="glass-panel p-8 rounded-2xl shadow-xl max-w-lg mx-auto">
-          <h3 className="text-lg font-semibold mb-6 text-slate-200">1. Faculty Details</h3>
+        <div className="glass-panel p-8 rounded-2xl shadow-md max-w-lg mx-auto bg-white border border-slate-200/80">
+          <h3 className="text-base font-bold mb-6 text-slate-800">1. Faculty Details</h3>
           <div className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Teacher ID</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Teacher ID</label>
               <input
                 type="text"
                 value={formData.teacherId}
                 onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
                 placeholder="e.g. FAC-101"
-                className="w-full bg-slate-900 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg py-2.5 px-4 text-slate-100 placeholder-slate-600 outline-none transition"
+                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Full Name</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g. Prof. Alan Turing"
-                className="w-full bg-slate-900 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg py-2.5 px-4 text-slate-100 placeholder-slate-600 outline-none transition"
+                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Department</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Department</label>
               <input
                 type="text"
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                 placeholder="e.g. Mathematics"
-                className="w-full bg-slate-900 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg py-2.5 px-4 text-slate-100 placeholder-slate-600 outline-none transition"
+                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition"
               />
             </div>
 
@@ -380,7 +380,7 @@ export default function EnrollmentWizard() {
                 }
                 setStep(2);
               }}
-              className="w-full mt-4 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-lg shadow-sky-500/20"
+              className="w-full mt-4 bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/10"
             >
               Continue to Biometrics
               <ArrowRight size={18} />
@@ -392,13 +392,13 @@ export default function EnrollmentWizard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left panel: Camera stream with overlay guides */}
           <div className="md:col-span-2 space-y-4">
-            <div className="glass-panel rounded-2xl overflow-hidden relative border border-slate-800 shadow-xl bg-slate-950">
+            <div className="bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-md relative aspect-[4/3] flex items-center justify-center">
               {/* Webcam Video */}
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className="w-full aspect-[4/3] object-cover scale-x-[-1]"
+                className="w-full h-full object-cover scale-x-[-1]"
               />
 
               {/* Dynamic Interactive Guide Overlay Canvas */}
@@ -408,31 +408,31 @@ export default function EnrollmentWizard() {
               />
 
               {/* Visual guidance box */}
-              <div className="absolute top-3 left-3 bg-slate-950/85 backdrop-blur border border-slate-800 text-[10px] font-mono py-1.5 px-3 rounded-lg text-slate-300 flex gap-4">
+              <div className="absolute top-3 left-3 bg-white/95 backdrop-blur border border-slate-200 text-[10px] font-sans py-1.5 px-3 rounded-lg text-slate-700 shadow-sm flex gap-4">
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
                   Target: {POSES[currentPoseIdx]?.label}
                 </span>
-                <span>Yaw: <b className="text-slate-400">{Math.round(validationMetrics.yaw)}°</b></span>
-                <span>Pitch: <b className="text-slate-400">{Math.round(validationMetrics.pitch)}°</b></span>
+                <span>Yaw: <b className="text-slate-500">{Math.round(validationMetrics.yaw)}°</b></span>
+                <span>Pitch: <b className="text-slate-500">{Math.round(validationMetrics.pitch)}°</b></span>
               </div>
 
               {/* Status bar */}
-              <div className={`absolute bottom-0 left-0 right-0 py-3.5 px-4 backdrop-blur border-t border-slate-800 flex items-center gap-3 ${
+              <div className={`absolute bottom-0 left-0 right-0 py-3.5 px-4 bg-white/95 backdrop-blur border-t border-slate-200 flex items-center gap-3 ${
                 currentPoseIdx === POSES.length 
-                  ? 'bg-emerald-950/85 text-emerald-300'
-                  : 'bg-slate-950/85 text-sky-400'
+                  ? 'text-emerald-700'
+                  : 'text-indigo-600'
               }`}>
                 {currentPoseIdx === POSES.length ? (
                   <>
-                    <CheckCircle size={18} className="text-emerald-400 animate-pulse" />
-                    <span className="font-semibold text-sm">All 5 poses successfully captured!</span>
+                    <CheckCircle size={18} className="text-emerald-500 animate-pulse" />
+                    <span className="font-bold text-xs">All 5 poses successfully captured!</span>
                   </>
                 ) : (
                   <>
-                    <RefreshCw size={16} className="animate-spin text-sky-400" />
-                    <span className="text-xs font-semibold uppercase tracking-wider">GUIDANCE:</span>
-                    <span className="text-xs text-slate-200">{validationMsg}</span>
+                    <RefreshCw size={14} className="animate-spin text-indigo-500" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">GUIDANCE:</span>
+                    <span className="text-xs text-slate-600 font-medium">{validationMsg}</span>
                   </>
                 )}
               </div>
@@ -440,15 +440,15 @@ export default function EnrollmentWizard() {
 
             {/* Instruction Callout */}
             {currentPoseIdx < POSES.length && (
-              <div className="glass-panel p-4 rounded-xl border border-sky-950/30 bg-sky-950/5 flex items-start gap-3.5">
-                <div className="p-2.5 bg-sky-500/10 rounded-xl text-sky-400 mt-0.5 border border-sky-500/10">
+              <div className="bg-indigo-50/50 border border-indigo-100/50 p-4 rounded-xl flex items-start gap-3.5">
+                <div className="p-2.5 bg-indigo-100/60 rounded-xl text-indigo-600 mt-0.5 border border-indigo-200/20">
                   <Camera size={20} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sky-400 text-sm">
+                  <h4 className="font-bold text-indigo-700 text-sm">
                     Pose {currentPoseIdx + 1}/5: {POSES[currentPoseIdx].label}
                   </h4>
-                  <p className="text-slate-400 text-xs mt-1.5 leading-relaxed font-medium">
+                  <p className="text-slate-500 text-xs mt-1.5 leading-relaxed font-medium">
                     {POSES[currentPoseIdx].instruction}
                   </p>
                 </div>
@@ -458,10 +458,10 @@ export default function EnrollmentWizard() {
 
           {/* Right panel: Pose lists & Action Button */}
           <div className="space-y-4">
-            <div className="glass-panel p-5 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Capture Checklist</h3>
-                <HelpCircle size={16} className="text-slate-500" title="Align the pointer dot in the target rings to complete each pose." />
+            <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-505">Capture Checklist</h3>
+                <HelpCircle size={16} className="text-slate-400" title="Align the pointer dot in the target rings to complete each pose." />
               </div>
               <div className="space-y-2.5">
                 {POSES.map((pose, idx) => {
@@ -472,21 +472,21 @@ export default function EnrollmentWizard() {
                       key={pose.key}
                       className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                         isCaptured
-                          ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400 shadow-sm'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-sm'
                           : isActive
-                          ? 'bg-sky-950/20 border-sky-500/35 text-sky-300 ring-1 ring-sky-500/15 shadow-md shadow-sky-500/5'
-                          : 'bg-slate-900/50 border-slate-950 text-slate-500'
+                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-medium ring-1 ring-indigo-500/10'
+                          : 'bg-slate-50 border-slate-100 text-slate-400'
                       }`}
                     >
                       <span className="text-xs font-semibold">{pose.label}</span>
                       {isCaptured ? (
-                        <CheckCircle size={15} className="text-emerald-400" />
+                        <CheckCircle size={15} className="text-emerald-500" />
                       ) : isActive ? (
-                        <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 bg-sky-500/20 text-sky-400 rounded-full animate-pulse">
+                        <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full animate-pulse">
                           Active
                         </span>
                       ) : (
-                        <span className="w-3.5 h-3.5 rounded-full border border-slate-800"></span>
+                        <span className="w-3.5 h-3.5 rounded-full border border-slate-200 bg-white"></span>
                       )}
                     </div>
                   );
@@ -499,7 +499,7 @@ export default function EnrollmentWizard() {
               <button
                 onClick={handleRegisterSubmit}
                 disabled={isSubmitting}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-lg shadow-emerald-500/20"
+                className="w-full bg-emerald-650 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/10"
               >
                 {isSubmitting ? (
                   <>
@@ -517,7 +517,7 @@ export default function EnrollmentWizard() {
 
             <button
               onClick={resetWizard}
-              className="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 font-semibold py-2 px-4 rounded-xl transition text-xs"
+              className="w-full bg-white hover:bg-slate-50 text-slate-500 border border-slate-200 font-semibold py-2.5 px-4 rounded-xl transition text-xs shadow-sm"
             >
               Cancel & Reset
             </button>

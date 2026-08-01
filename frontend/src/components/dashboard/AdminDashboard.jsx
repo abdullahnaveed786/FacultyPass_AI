@@ -178,47 +178,47 @@ export default function AdminDashboard() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4">
-        <div className="glass-panel p-8 rounded-2xl w-full max-w-md shadow-2xl relative">
-          <div className="absolute right-0 top-0 w-48 h-48 bg-sky-500/10 rounded-full blur-2xl"></div>
+        <div className="glass-panel p-8 rounded-2xl w-full max-w-md shadow-xl border border-slate-200/80 bg-white relative">
+          <div className="absolute right-0 top-0 w-48 h-48 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none"></div>
           
           <div className="flex flex-col items-center mb-6">
-            <div className="p-3.5 bg-sky-500/10 text-sky-400 rounded-2xl mb-3 border border-sky-500/20">
-              <Lock size={28} />
+            <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl mb-3 border border-indigo-100">
+              <Lock size={24} />
             </div>
-            <h2 className="text-xl font-bold text-slate-100">Administrator Console</h2>
-            <p className="text-slate-400 text-xs mt-1">Authenticate to access attendance logs and override panels</p>
+            <h2 className="text-lg font-bold text-slate-800">Administrator Console</h2>
+            <p className="text-slate-400 text-xs mt-1 text-center">Authenticate to access attendance logs and override panels</p>
           </div>
 
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Username</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Username</label>
               <input
                 type="text"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 placeholder="admin"
-                className="w-full bg-slate-900 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg py-2 px-3.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition"
+                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2 px-3.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+              <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-2">Password</label>
               <input
                 type="password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-slate-900 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg py-2 px-3.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition"
+                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2 px-3.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition"
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full mt-2 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-55 shadow-lg shadow-sky-500/20"
+              className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-55 shadow-md shadow-indigo-600/10"
             >
               {isLoggingIn ? (
                 <>
-                  <RefreshCw size={18} className="animate-spin" />
+                  <RefreshCw size={16} className="animate-spin" />
                   Authenticating...
                 </>
               ) : (
@@ -234,25 +234,25 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 space-y-6">
       {/* Top Banner Row */}
-      <div className="glass-panel p-6 rounded-2xl shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-sky-500/5 rounded-full blur-3xl"></div>
+      <div className="glass-panel p-6 rounded-2xl shadow-sm border border-slate-200/80 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
         <div>
-          <h2 className="text-2xl font-bold text-slate-200">Management & Audit Control</h2>
-          <p className="text-slate-400 text-sm mt-1">Review check-in logs, download CSV sheets, and override student/faculty sessions.</p>
+          <h2 className="text-xl font-bold text-slate-800">Management & Audit Control</h2>
+          <p className="text-slate-400 text-xs mt-1">Review check-in logs, download CSV sheets, and override student/faculty sessions.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowOverrideModal(true)}
-            className="bg-sky-500 hover:bg-sky-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-lg shadow-sky-500/25"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-indigo-500/10"
           >
-            <PlusCircle size={16} />
+            <PlusCircle size={15} />
             Manual Override
           </button>
           <button
             onClick={logout}
-            className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 font-semibold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 transition"
+            className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-505 font-semibold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-sm"
           >
-            <LogOut size={16} />
+            <LogOut size={15} />
             Logout
           </button>
         </div>
@@ -261,96 +261,96 @@ export default function AdminDashboard() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1 */}
-        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-900">
-          <div className="p-3 bg-sky-500/10 text-sky-400 rounded-xl">
-            <Users size={22} />
+        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-200 bg-white shadow-sm">
+          <div className="p-3 bg-indigo-50 text-indigo-650 rounded-xl border border-indigo-100/50">
+            <Users size={22} className="text-indigo-600" />
           </div>
           <div>
             <div className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Total Faculty</div>
-            <div className="text-2xl font-extrabold text-slate-100 mt-1">{summary.total_faculty}</div>
+            <div className="text-xl font-extrabold text-slate-800 mt-0.5">{summary.total_faculty}</div>
           </div>
         </div>
 
         {/* Card 2 */}
-        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-900">
-          <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
-            <UserCheck size={22} />
+        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-200 bg-white shadow-sm">
+          <div className="p-3 bg-emerald-50 text-emerald-650 rounded-xl border border-emerald-100/50">
+            <UserCheck size={22} className="text-emerald-600" />
           </div>
           <div>
             <div className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Present Today</div>
-            <div className="text-2xl font-extrabold text-slate-100 mt-1">{summary.present_today}</div>
+            <div className="text-xl font-extrabold text-slate-800 mt-0.5">{summary.present_today}</div>
           </div>
         </div>
 
         {/* Card 3 */}
-        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-900">
-          <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
-            <CheckCircle2 size={22} />
+        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-200 bg-white shadow-sm">
+          <div className="p-3 bg-sky-50 text-sky-650 rounded-xl border border-sky-100/50">
+            <CheckCircle2 size={22} className="text-sky-600" />
           </div>
           <div>
             <div className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Currently Checked-In</div>
-            <div className="text-2xl font-extrabold text-slate-100 mt-1">{summary.currently_active}</div>
+            <div className="text-xl font-extrabold text-slate-800 mt-0.5">{summary.currently_active}</div>
           </div>
         </div>
 
         {/* Card 4 */}
-        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-900">
-          <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
-            <Clock size={22} />
+        <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-200 bg-white shadow-sm">
+          <div className="p-3 bg-amber-50 text-amber-650 rounded-xl border border-amber-100/50">
+            <Clock size={22} className="text-amber-600" />
           </div>
           <div>
             <div className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Hours Logged Today</div>
-            <div className="text-2xl font-extrabold text-slate-100 mt-1">{summary.total_working_hours_today}h</div>
+            <div className="text-xl font-extrabold text-slate-800 mt-0.5">{summary.total_working_hours_today}h</div>
           </div>
         </div>
       </div>
 
       {/* Filter and Table Section */}
-      <div className="glass-panel rounded-2xl overflow-hidden shadow-xl border border-slate-900">
+      <div className="glass-panel rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white">
         
         {/* Filters Header bar */}
-        <div className="p-5 border-b border-slate-800 bg-slate-900/40 flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full lg:max-w-4xl">
             {/* Filter 1 */}
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-slate-600" size={16} />
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
               <input
                 type="text"
                 placeholder="Filter Teacher ID"
                 value={filterId}
                 onChange={(e) => setFilterId(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-sky-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none"
+                className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
               />
             </div>
             {/* Filter 2 */}
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-slate-600" size={16} />
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
               <input
                 type="text"
                 placeholder="Filter Department"
                 value={filterDept}
                 onChange={(e) => setFilterDept(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-sky-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none"
+                className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
               />
             </div>
             {/* Filter 3 */}
             <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 text-slate-600" size={16} />
+              <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
               <input
                 type="date"
                 value={filterDateFrom}
                 onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-sky-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none"
+                className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
               />
             </div>
             {/* Filter 4 */}
             <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 text-slate-600" size={16} />
+              <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
               <input
                 type="date"
                 value={filterDateTo}
                 onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-sky-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none"
+                className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
               />
             </div>
           </div>
@@ -359,16 +359,16 @@ export default function AdminDashboard() {
             <button
               onClick={fetchDashboardData}
               disabled={isLoading}
-              className="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-lg text-slate-400 transition"
+              className="bg-white hover:bg-slate-50 border border-slate-200 p-2 rounded-lg text-slate-500 transition shadow-sm"
               title="Refresh logs"
             >
-              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+              <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={exportToCSV}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition shadow-sm shadow-emerald-500/10"
             >
-              <FileSpreadsheet size={16} />
+              <FileSpreadsheet size={15} />
               Export CSV
             </button>
           </div>
@@ -378,7 +378,7 @@ export default function AdminDashboard() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-slate-900/60 border-b border-slate-800 text-slate-400 font-semibold">
+              <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
                 <th className="p-4">Teacher</th>
                 <th className="p-4">Department</th>
                 <th className="p-4">Date</th>
@@ -389,47 +389,47 @@ export default function AdminDashboard() {
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-900">
+            <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500">
-                    <RefreshCw className="animate-spin inline-block mr-2" size={16} />
+                  <td colSpan="8" className="p-8 text-center text-slate-400">
+                    <RefreshCw className="animate-spin inline-block mr-2 text-indigo-500" size={16} />
                     Loading attendance database records...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500">
+                  <td colSpan="8" className="p-8 text-center text-slate-400">
                     No matching attendance logs found.
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-900/40 text-slate-300">
+                  <tr key={log.id} className="hover:bg-slate-50/40 text-slate-600 transition">
                     <td className="p-4">
-                      <div className="font-semibold text-slate-200">{log.teacher_name}</div>
-                      <div className="text-[10px] text-slate-500 font-mono mt-0.5">{log.teacher_id}</div>
+                      <div className="font-bold text-slate-800">{log.teacher_name}</div>
+                      <div className="text-[9px] text-slate-400 font-mono mt-0.5">{log.teacher_id}</div>
                     </td>
-                    <td className="p-4 text-slate-400">{log.teacher_department}</td>
-                    <td className="p-4 text-slate-400">{log.date}</td>
-                    <td className="p-4 font-mono text-slate-400">
+                    <td className="p-4 text-slate-505">{log.teacher_department}</td>
+                    <td className="p-4 text-slate-505">{log.date}</td>
+                    <td className="p-4 font-mono text-slate-505">
                       {new Date(log.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </td>
-                    <td className="p-4 font-mono text-slate-400">
+                    <td className="p-4 font-mono text-slate-505">
                       {log.check_out_time 
                         ? new Date(log.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
                         : '—'}
                     </td>
-                    <td className="p-4 font-semibold text-sky-400">
+                    <td className="p-4 font-semibold text-indigo-600">
                       {log.total_working_hours !== null ? `${log.total_working_hours.toFixed(2)}h` : '—'}
                     </td>
                     <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                      <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] border ${
                         log.status === 'CHECKED_IN'
-                          ? 'bg-emerald-500/10 text-emerald-400'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                           : log.status === 'COMPLETED' || log.status === 'CHECKED_OUT'
-                          ? 'bg-sky-500/10 text-sky-400'
-                          : 'bg-rose-500/10 text-rose-400'
+                          ? 'bg-sky-50 text-sky-700 border-sky-100'
+                          : 'bg-rose-50 text-rose-705 border-rose-100'
                       }`}>
                         {log.status}
                       </span>
@@ -437,10 +437,10 @@ export default function AdminDashboard() {
                     <td className="p-4 text-center">
                       <button
                         onClick={() => handleDeleteLog(log.id)}
-                        className="text-rose-500 hover:text-rose-400 p-1 hover:bg-rose-500/10 rounded transition"
+                        className="text-rose-500 hover:text-rose-600 p-1 hover:bg-rose-50 rounded-lg transition"
                         title="Delete log record"
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={14} />
                       </button>
                     </td>
                   </tr>
@@ -453,17 +453,17 @@ export default function AdminDashboard() {
 
       {/* Manual Override Modal Overlay */}
       {showOverrideModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass-panel p-6 rounded-2xl w-full max-w-md shadow-2xl relative border border-slate-800">
-            <h3 className="text-lg font-bold text-slate-200 mb-4">Manual Attendance Session Override</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="glass-panel p-6 rounded-2xl w-full max-w-md shadow-xl border border-slate-200 bg-white relative">
+            <h3 className="text-base font-bold text-slate-800 mb-4">Manual Attendance Session Override</h3>
             
             <form onSubmit={handleSaveOverride} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Select Teacher</label>
+                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Select Teacher</label>
                 <select
                   value={overrideData.teacherId}
                   onChange={(e) => setOverrideData({ ...overrideData, teacherId: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-sm text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition"
                 >
                   <option value="">-- Choose registered teacher --</option>
                   {teachers.map(t => (
@@ -475,31 +475,31 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Check-In Datetime</label>
+                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Check-In Datetime</label>
                 <input
                   type="datetime-local"
                   value={overrideData.checkInTime}
                   onChange={(e) => setOverrideData({ ...overrideData, checkInTime: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 outline-none font-mono"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-sm text-slate-700 outline-none font-mono focus:bg-white focus:border-indigo-500 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Check-Out Datetime (Optional)</label>
+                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Check-Out Datetime (Optional)</label>
                 <input
                   type="datetime-local"
                   value={overrideData.checkOutTime}
                   onChange={(e) => setOverrideData({ ...overrideData, checkOutTime: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 outline-none font-mono"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-sm text-slate-700 outline-none font-mono focus:bg-white focus:border-indigo-500 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Session Status</label>
+                <label className="block text-[10px] font-bold text-slate-455 uppercase mb-1.5">Session Status</label>
                 <select
                   value={overrideData.status}
                   onChange={(e) => setOverrideData({ ...overrideData, status: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-sm text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition"
                 >
                   <option value="CHECKED_IN">CHECKED_IN (Open Session)</option>
                   <option value="COMPLETED">COMPLETED (Closed Session)</option>
@@ -510,14 +510,14 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowOverrideModal(false)}
-                  className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 px-4 py-2 rounded-lg font-semibold"
+                  className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 px-4 py-2 rounded-lg font-semibold transition shadow-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingOverride}
-                  className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1 shadow-lg shadow-sky-500/20"
+                  className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-500/10 transition"
                 >
                   {isSavingOverride && <RefreshCw size={14} className="animate-spin" />}
                   Save Session

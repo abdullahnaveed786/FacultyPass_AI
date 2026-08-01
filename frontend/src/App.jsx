@@ -10,10 +10,10 @@ function DashboardContainer() {
   const [activeTab, setActiveTab] = useState('kiosk'); // 'kiosk', 'enrollment', 'dashboard'
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative pb-12">
+    <div className="min-h-screen bg-slate-50 text-slate-600 flex flex-col relative pb-12">
       {/* Decorative gradient glowing spots */}
-      <div className="absolute top-[10%] left-[5%] w-80 h-80 bg-sky-500/5 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[20%] right-[10%] w-96 h-96 bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-[10%] left-[5%] w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-[20%] right-[10%] w-96 h-96 bg-sky-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
       {/* Navigation Header */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
