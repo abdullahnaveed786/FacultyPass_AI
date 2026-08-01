@@ -23,26 +23,26 @@ export const NotificationProvider = ({ children }) => {
     <NotificationContext.Provider value={{ addNotification }}>
       {children}
       {/* Toast Render Area */}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none">
+      <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-start justify-between gap-3 px-4 py-3.5 rounded-lg shadow-xl border text-sm font-medium transition-all transform duration-300 translate-x-0 ${
+            className={`pointer-events-auto flex items-start justify-between gap-3 p-4 rounded-xl shadow-lg border text-xs font-semibold tracking-wide transition-all transform duration-300 translate-x-0 ${
               toast.type === 'success'
-                ? 'bg-emerald-950/95 border-emerald-500/40 text-emerald-200'
+                ? 'bg-emerald-50/95 border-emerald-200 text-emerald-800'
                 : toast.type === 'error'
-                ? 'bg-rose-950/95 border-rose-500/40 text-rose-200'
+                ? 'bg-rose-50/95 border-rose-200 text-rose-800'
                 : toast.type === 'warning'
-                ? 'bg-amber-950/95 border-amber-500/40 text-amber-200'
-                : 'bg-sky-950/95 border-sky-500/40 text-sky-200'
+                ? 'bg-amber-50/95 border-amber-200 text-amber-800'
+                : 'bg-indigo-50/95 border-indigo-100/50 text-indigo-800'
             }`}
           >
-            <div className="flex-1">
+            <div className="flex-1 leading-relaxed">
               {toast.message}
             </div>
             <button
               onClick={() => removeNotification(toast.id)}
-              className="text-slate-400 hover:text-slate-100 transition-colors text-lg leading-none"
+              className="text-slate-400 hover:text-slate-700 transition-colors text-sm font-normal leading-none"
             >
               &times;
             </button>

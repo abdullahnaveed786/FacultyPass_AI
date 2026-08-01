@@ -383,7 +383,6 @@ export default function Kiosk() {
               <button
                 onClick={() => {
                   setMode('CHECK_IN');
-                  addNotification('Switched to Check-In Mode.', 'info', 2000);
                 }}
                 className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
                   mode === 'CHECK_IN'
@@ -397,7 +396,6 @@ export default function Kiosk() {
               <button
                 onClick={() => {
                   setMode('CHECK_OUT');
-                  addNotification('Switched to Check-Out Mode.', 'info', 2000);
                 }}
                 className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
                   mode === 'CHECK_OUT'
