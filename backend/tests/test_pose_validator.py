@@ -12,9 +12,9 @@ def test_estimate_head_pose_center():
     kps = np.array([
         [297.5, 240.0],
         [342.5, 240.0],
-        [320.0, 252.0],
-        [305.0, 277.0],
-        [335.0, 277.0]
+        [320.0, 261.0],
+        [305.0, 286.0],
+        [335.0, 286.0]
     ], dtype=np.float32)
 
     yaw, pitch, roll = estimate_head_pose(kps, 640, 480)
@@ -28,9 +28,9 @@ def test_validate_pose_orientation_front():
     kps = np.array([
         [297.5, 240.0],
         [342.5, 240.0],
-        [320.0, 252.0],
-        [305.0, 277.0],
-        [335.0, 277.0]
+        [320.0, 261.0],
+        [305.0, 286.0],
+        [335.0, 286.0]
     ], dtype=np.float32)
 
     face = MockFace(kps)
@@ -44,9 +44,9 @@ def test_validate_pose_orientation_left_rejected():
     kps = np.array([
         [297.5, 240.0],
         [342.5, 240.0],
-        [320.0, 252.0],
-        [305.0, 277.0],
-        [335.0, 277.0]
+        [320.0, 261.0],
+        [305.0, 286.0],
+        [335.0, 286.0]
     ], dtype=np.float32)
 
     face = MockFace(kps)

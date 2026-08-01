@@ -20,28 +20,27 @@ class AttendanceService:
     @staticmethod
     async def process_biometric_hit(
         teacher_id: str, 
+        action: str,
         db: AsyncSession
     ) -> Dict[str, Any]:
         """
-        Main entry point for processing a successful biometric scan.
-        Checks cooldown via Redis, then performs check-in/out transition.
+        Processes a biometric scan with an explicit intent (CHECK_IN or CHECK_OUT).
+        Enforces strict check-in -> check-out -> check-in state transitions.
         """
-        # 1. Check Redis Cooldown state
+        # 1. Check Redis Cooldown state (prevents spamming scans within a few seconds)
         cooldown_key = f"cooldown:{teacher_id}"
         cooldown_val = await redis_client.get(cooldown_key)
 
         if cooldown_val:
-            # Cooldown is active. Do not record double entries.
-            # Retrieve remaining TTL
             ttl = await redis_client.ttl(cooldown_key)
             return {
                 "status": "COOLDOWN_ACTIVE",
-                "message": f"Cooldown active. Please wait {ttl} seconds before scanning again.",
+                "message": f"Scan registered too quickly. Please wait {ttl} seconds.",
                 "cooldown_remaining": ttl,
                 "teacher_id": teacher_id
             }
 
-        # 2. Query database for latest attendance record of this teacher
+        # 2. Query database for the latest attendance record of this teacher
         stmt = select(AttendanceLog).where(
             AttendanceLog.teacher_id == teacher_id
         ).order_by(
@@ -52,60 +51,78 @@ class AttendanceService:
         latest_log = result.scalar_one_or_none()
 
         now_utc = datetime.now(timezone.utc)
+        has_open_session = latest_log and latest_log.status == "CHECKED_IN" and latest_log.check_out_time is None
 
-        # 3. State Machine transition
-        # Case A: Latest session is open (checked in but not checked out)
-        if latest_log and latest_log.status == "CHECKED_IN" and latest_log.check_out_time is None:
-            # Perform Check-Out
-            latest_log.check_out_time = now_utc
-            latest_log.status = "COMPLETED"
-            
-            # Calculate total working hours
-            duration = now_utc - latest_log.check_in_time
-            latest_log.total_working_hours = round(duration.total_seconds() / 3600.0, 4)
-            
-            db.add(latest_log)
-            await db.flush()
-            
-            # Set Redis cooldown (15 minutes)
-            await redis_client.set(cooldown_key, "COMPLETED", ex=settings.COOLDOWN_SECONDS)
-            
-            return {
-                "status": "CHECKED_OUT",
-                "message": "Check-out logged successfully.",
-                "log_id": str(latest_log.id),
-                "check_in_time": latest_log.check_in_time.isoformat(),
-                "check_out_time": latest_log.check_out_time.isoformat(),
-                "working_hours": latest_log.total_working_hours
-            }
-            
-        # Case B: No prior log, or latest session is already closed/completed
-        else:
-            # Perform Check-In (Create a new log row)
-            new_log = AttendanceLog(
-                id=uuid.uuid4(),
-                teacher_id=teacher_id,
-                date=now_utc.date(),
-                check_in_time=now_utc,
-                check_out_time=None,
-                total_working_hours=None,
-                status="CHECKED_IN"
-            )
-            
-            db.add(new_log)
-            await db.flush()
-            
-            # Set Redis cooldown (15 minutes)
-            await redis_client.set(cooldown_key, "CHECKED_IN", ex=settings.COOLDOWN_SECONDS)
-            
-            return {
-                "status": "CHECKED_IN",
-                "message": "Check-in logged successfully.",
-                "log_id": str(new_log.id),
-                "check_in_time": new_log.check_in_time.isoformat(),
-                "check_out_time": None,
-                "working_hours": None
-            }
+        # 3. State Machine transition based on user's selected mode
+        if action == "CHECK_IN":
+            if has_open_session:
+                # Block duplicate check-in
+                return {
+                  "status": "ALREADY_CHECKED_IN",
+                  "message": "Duplicate Blocked: You are already checked in. Please check out first!",
+                  "teacher_id": teacher_id
+                }
+            else:
+                # Perform Check-In (New record in PostgreSQL)
+                new_log = AttendanceLog(
+                    id=uuid.uuid4(),
+                    teacher_id=teacher_id,
+                    date=now_utc.date(),
+                    check_in_time=now_utc,
+                    check_out_time=None,
+                    total_working_hours=None,
+                    status="CHECKED_IN"
+                )
+                db.add(new_log)
+                await db.flush()
+                
+                # Set minor cooldown key in Redis (e.g., 10 seconds to prevent double scanning in the same event)
+                await redis_client.set(cooldown_key, "CHECKED_IN", ex=10)
+                
+                return {
+                    "status": "CHECKED_IN",
+                    "message": "Check-in logged successfully in database.",
+                    "log_id": str(new_log.id),
+                    "check_in_time": new_log.check_in_time.isoformat(),
+                    "check_out_time": None,
+                    "working_hours": None
+                }
+
+        elif action == "CHECK_OUT":
+            if not has_open_session:
+                # Block check-out if not checked in
+                return {
+                  "status": "NOT_CHECKED_IN",
+                  "message": "Access Denied: You must check in before you can check out!",
+                  "teacher_id": teacher_id
+                }
+            else:
+                # Perform Check-Out (Update the open session record in PostgreSQL)
+                latest_log.check_out_time = now_utc
+                latest_log.status = "COMPLETED"
+                
+                duration = now_utc - latest_log.check_in_time
+                latest_log.total_working_hours = round(duration.total_seconds() / 3600.0, 4)
+                
+                db.add(latest_log)
+                await db.flush()
+                
+                # Set minor cooldown key in Redis
+                await redis_client.set(cooldown_key, "COMPLETED", ex=10)
+                
+                return {
+                    "status": "CHECKED_OUT",
+                    "message": "Check-out logged successfully in database.",
+                    "log_id": str(latest_log.id),
+                    "check_in_time": latest_log.check_in_time.isoformat(),
+                    "check_out_time": latest_log.check_out_time.isoformat(),
+                    "working_hours": latest_log.total_working_hours
+                }
+        
+        return {
+            "status": "INVALID_ACTION",
+            "message": f"Action {action} is not supported."
+        }
 
     @staticmethod
     async def get_dashboard_summary(db: AsyncSession) -> Dict[str, Any]:

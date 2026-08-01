@@ -9,7 +9,7 @@ from app.models.teacher import Teacher
 from app.models.embedding import TeacherEmbedding
 from app.schemas.teacher import TeacherRegisterRequest, TeacherResponse
 from app.services.vision_service import vision_service, decode_base64_image
-from app.services.pose_validator import validate_pose_orientation
+from app.services.pose_validator import validate_pose_orientation, get_nose_projection
 from app.services.biometric_service import check_biometric_duplicate
 import numpy as np
 
@@ -26,6 +26,8 @@ class PoseValidateResponse(BaseModel):
     pitch: float
     roll: float
     embedding: Optional[List[float]] = None
+    nose_tip: Optional[List[float]] = None
+    nose_pointer: Optional[List[float]] = None
 
 @router.post("/validate-pose", response_model=PoseValidateResponse)
 async def validate_pose(payload: PoseValidateRequest):
@@ -50,7 +52,9 @@ async def validate_pose(payload: PoseValidateRequest):
             is_valid=False,
             message="No face detected in frame. Please adjust lighting and center your face.",
             yaw=0.0, pitch=0.0, roll=0.0,
-            embedding=None
+            embedding=None,
+            nose_tip=None,
+            nose_pointer=None
         )
 
     # Get the largest face in the frame
@@ -61,6 +65,14 @@ async def validate_pose(payload: PoseValidateRequest):
         largest_face, payload.pose_name, img_w=w, img_h=h
     )
 
+    # Calculate projected nose vectors for UI alignment drawing
+    tip, pointer = get_nose_projection(largest_face.kps, w, h)
+    nose_tip_list = list(tip)
+    nose_pointer_list = list(pointer)
+
+    # Convert numpy float32 embedding to standard python float list
+    embedding_list = largest_face.embedding.astype(float).tolist()
+
     if not is_valid:
         return PoseValidateResponse(
             is_valid=False,
@@ -68,11 +80,10 @@ async def validate_pose(payload: PoseValidateRequest):
             yaw=round(yaw, 2),
             pitch=round(pitch, 2),
             roll=round(roll, 2),
-            embedding=None
+            embedding=None,
+            nose_tip=nose_tip_list,
+            nose_pointer=nose_pointer_list
         )
-
-    # Convert numpy float32 embedding to standard python float list
-    embedding_list = largest_face.embedding.astype(float).tolist()
 
     return PoseValidateResponse(
         is_valid=True,
@@ -80,7 +91,9 @@ async def validate_pose(payload: PoseValidateRequest):
         yaw=round(yaw, 2),
         pitch=round(pitch, 2),
         roll=round(roll, 2),
-        embedding=embedding_list
+        embedding=embedding_list,
+        nose_tip=nose_tip_list,
+        nose_pointer=nose_pointer_list
     )
 
 @router.post("/register", response_model=TeacherResponse, status_code=status.HTTP_201_CREATED)

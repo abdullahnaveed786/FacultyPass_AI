@@ -5,11 +5,11 @@ from typing import Tuple, Any
 # Standard 3D facial coordinate model points (5 landmarks) in mm.
 # Coordinates are relative to a point inside the head.
 FACE_3D_POINTS = np.array([
-    [-22.5, 9.0, -15.0],      # Left Eye (viewer's left, person's right eye)
-    [22.5, 9.0, -15.0],       # Right Eye (viewer's right, person's left eye)
-    [0.0, -12.0, 15.0],       # Nose Tip
-    [-15.0, -37.0, -10.0],    # Left Mouth Corner
-    [15.0, -37.0, -10.0]      # Right Mouth Corner
+    [-22.5, -9.0, -15.0],      # Left Eye (viewer's left, person's right eye)
+    [22.5, -9.0, -15.0],       # Right Eye (viewer's right, person's left eye)
+    [0.0, 12.0, 15.0],         # Nose Tip
+    [-15.0, 37.0, -10.0],      # Left Mouth Corner
+    [15.0, 37.0, -10.0]        # Right Mouth Corner
 ], dtype=np.float32)
 
 def estimate_head_pose(kps: np.ndarray, img_w: int, img_h: int) -> Tuple[float, float, float]:
@@ -35,13 +35,13 @@ def estimate_head_pose(kps: np.ndarray, img_w: int, img_h: int) -> Tuple[float, 
     # Assuming zero lens distortion
     dist_coeffs = np.zeros((4, 1), dtype=np.float32)
 
-    # solvePnP to find translation and rotation vectors
+    # solvePnP to find translation and rotation vectors using EPnP (supports 4+ points)
     success, rvec, tvec = cv2.solvePnP(
         FACE_3D_POINTS,
         image_points,
         camera_matrix,
         dist_coeffs,
-        flags=cv2.SOLVEPNP_ITERATIVE
+        flags=cv2.SOLVEPNP_EPNP
     )
 
     if not success:
@@ -69,6 +69,51 @@ def estimate_head_pose(kps: np.ndarray, img_w: int, img_h: int) -> Tuple[float, 
     roll_deg = float(np.degrees(roll))
 
     return yaw_deg, pitch_deg, roll_deg
+
+def get_nose_projection(kps: np.ndarray, img_w: int, img_h: int) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+    """
+    Computes the 2D projected coordinates of the nose vector (origin -> Z-axis)
+    to draw a 3D direction pointer on the frontend canvas.
+    """
+    image_points = kps.astype(np.float32)
+
+    # Approximate Camera Matrix
+    focal_length = img_w
+    center = (img_w / 2.0, img_h / 2.0)
+    camera_matrix = np.array([
+        [focal_length, 0, center[0]],
+        [0, focal_length, center[1]],
+        [0, 0, 1]
+    ], dtype=np.float32)
+
+    dist_coeffs = np.zeros((4, 1), dtype=np.float32)
+
+    # solvePnP
+    success, rvec, tvec = cv2.solvePnP(
+        FACE_3D_POINTS,
+        image_points,
+        camera_matrix,
+        dist_coeffs,
+        flags=cv2.SOLVEPNP_EPNP
+    )
+
+    if not success:
+        return (0.0, 0.0), (0.0, 0.0)
+
+    # 3D points: Origin (0,0,0) and a point 30mm straight out on the Z-axis (0,0,30)
+    axis_3d = np.array([
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 35.0]
+    ], dtype=np.float32)
+
+    # Project 3D points back onto 2D image plane
+    img_pts, _ = cv2.projectPoints(axis_3d, rvec, tvec, camera_matrix, dist_coeffs)
+
+    nose_tip_2d = (float(img_pts[0][0][0]), float(img_pts[0][0][1]))
+    nose_pointer_2d = (float(img_pts[1][0][0]), float(img_pts[1][0][1]))
+
+    return nose_tip_2d, nose_pointer_2d
+
 
 def validate_pose_orientation(face: Any, target_pose: str, img_w: int = 640, img_h: int = 480) -> Tuple[bool, str, Tuple[float, float, float]]:
     """

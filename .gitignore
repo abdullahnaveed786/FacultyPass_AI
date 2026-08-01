@@ -1,0 +1,35 @@
+# Environment Configurations (Credentials & Secrets)
+.env
+.env.example
+.env.local
+.env.*.local
+
+# Python Caches & Compiled Bytes
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+.cache/
+
+# Node.js / React Frontend Packages & Builds
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database & Cache Storage (Local Persistence)
+faculty_vector_db.pkl
+*.pkl
+*.db
+postgres_data/
+redis_data/
+insightface_models/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
