@@ -62,7 +62,7 @@ export default function Kiosk() {
   };
 
   // Stop Kiosk Webcam (fully releasing hardware in Chrome)
-  const stopKiosk = () => {
+  const stopKiosk = (showNotification = true) => {
     isKioskActiveRef.current = false;
     
     // 1. Clear scanning loop interval first
@@ -108,7 +108,9 @@ export default function Kiosk() {
       setActiveDetections([]);
       setIdentifiedTeacher(null);
       clearCanvas();
-      addNotification('Doorway Kiosk stopped.', 'info');
+      if (showNotification) {
+        addNotification('Doorway Kiosk stopped.', 'info');
+      }
     } catch (e) {
       console.error("Error updating UI states on stop:", e);
     }
@@ -271,7 +273,7 @@ export default function Kiosk() {
   };
 
   useEffect(() => {
-    return () => stopKiosk();
+    return () => stopKiosk(false);
   }, []);
 
   // Format Date for Header
