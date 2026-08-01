@@ -20,6 +20,9 @@ export default function Kiosk() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [mode, setMode] = useState('CHECK_IN'); // 'CHECK_IN' or 'CHECK_OUT'
 
+  // Ref to track active state synchronously and prevent async race conditions
+  const isKioskActiveRef = useRef(false);
+
   // Persistent historical list of recorded transactions in the session
   const [attendanceHistory, setAttendanceHistory] = useState([]);
 
@@ -34,6 +37,7 @@ export default function Kiosk() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
+        isKioskActiveRef.current = true;
         setIsKioskActive(true);
         startScanningLoop();
         addNotification('Doorway Kiosk activated.', 'success');
@@ -50,25 +54,55 @@ export default function Kiosk() {
 
   // Stop Kiosk Webcam (fully releasing hardware in Chrome)
   const stopKiosk = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-        console.log("Stopped track:", track.label);
-      });
-      streamRef.current = null;
+    isKioskActiveRef.current = false;
+    
+    // 1. Clear scanning loop interval first
+    try {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = null;
+      }
+    } catch (e) {
+      console.error("Error clearing scan interval:", e);
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+
+    // 2. Pause video element to stop rendering thread
+    try {
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.srcObject = null;
+      }
+    } catch (e) {
+      console.error("Error pausing video element:", e);
     }
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
+
+    // 3. Stop all media tracks to turn off the physical camera light
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
+          try {
+            track.stop();
+            console.log("Released webcam track:", track.label);
+          } catch (err) {
+            console.error("Error stopping track:", err);
+          }
+        });
+        streamRef.current = null;
+      }
+    } catch (e) {
+      console.error("Error stopping media stream:", e);
     }
-    setIsKioskActive(false);
-    setActiveDetections([]);
-    setIdentifiedTeacher(null);
-    clearCanvas();
-    addNotification('Doorway Kiosk stopped.', 'info');
+
+    // 4. Reset UI states
+    try {
+      setIsKioskActive(false);
+      setActiveDetections([]);
+      setIdentifiedTeacher(null);
+      clearCanvas();
+      addNotification('Doorway Kiosk stopped.', 'info');
+    } catch (e) {
+      console.error("Error updating UI states on stop:", e);
+    }
   };
 
   const clearCanvas = () => {
@@ -81,7 +115,7 @@ export default function Kiosk() {
 
   // Scan live frame (Identify only, no database logging)
   const scanFrame = async () => {
-    if (!videoRef.current || !streamRef.current) return;
+    if (!videoRef.current || !streamRef.current || !isKioskActiveRef.current) return;
     
     // Capture frame on offscreen canvas
     const captureCanvas = document.createElement('canvas');
@@ -97,6 +131,12 @@ export default function Kiosk() {
       const response = await axios.post(`${API_URL}/verification/identify`, {
         image: frameB64
       });
+
+      // Discard response if kiosk was stopped while the request was in flight
+      if (!isKioskActiveRef.current) {
+        console.log("Discarded in-flight frame scan because kiosk was stopped.");
+        return;
+      }
 
       const { status, detections } = response.data;
       
@@ -226,7 +266,7 @@ export default function Kiosk() {
     <div className="max-w-4xl mx-auto py-6 px-4">
       {/* Header Panel */}
       <div className="glass-panel p-6 rounded-2xl mb-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-3 text-emerald-400">

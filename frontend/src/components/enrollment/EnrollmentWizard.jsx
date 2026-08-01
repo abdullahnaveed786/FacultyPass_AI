@@ -326,7 +326,7 @@ export default function EnrollmentWizard() {
     <div className="max-w-4xl mx-auto py-6 px-4">
       {/* Top Header Card */}
       <div className="glass-panel p-6 rounded-2xl mb-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute right-0 top-0 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <h2 className="text-2xl font-bold flex items-center gap-3 text-sky-400">
           <UserPlus size={28} />
           Multi-Pose Faculty Registration
