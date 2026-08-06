@@ -6,6 +6,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     libglib2.0-0 \
     libgl1 \
+    wget \
+    unzip \
+    && mkdir -p /root/.insightface/models/buffalo_l \
+    && wget -qO /tmp/buffalo_l.zip https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip \
+    && unzip -q /tmp/buffalo_l.zip -d /root/.insightface/models/buffalo_l \
+    && rm /tmp/buffalo_l.zip \
+    && apt-get purge -y --auto-remove wget unzip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
