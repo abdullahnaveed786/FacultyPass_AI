@@ -24,6 +24,7 @@ class VisionService:
         self.app = FaceAnalysis(
             name=name,
             root=download_root,
+            allowed_modules=['detection', 'recognition'],
             providers=providers
         )
         self.app.prepare(ctx_id=ctx_id, det_size=det_size)
