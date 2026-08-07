@@ -1,7 +1,26 @@
 import os
 import uvicorn
+import sys
+import subprocess
 
-# 1. Limit CPU threading overhead to reduce memory usage in low-resource environments
+# 1. Self-healing OpenCV check (resolves missing libGL.so.1 on default python buildpacks)
+try:
+    import cv2
+except ImportError as e:
+    if "libGL.so.1" in str(e) or "libGL" in str(e):
+        print("[WARNING] OpenCV requires libGL.so.1 which is missing. Running self-healing reinstall of opencv-python-headless...")
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python", "opencv-python-headless"], check=True)
+            subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "opencv-python-headless==4.9.0.80"], check=True)
+            import cv2
+            print("[STATUS] OpenCV self-healing completed successfully! Headless CV2 loaded.")
+        except Exception as install_err:
+            print(f"[CRITICAL] OpenCV self-healing failed: {install_err}")
+            raise e
+    else:
+        raise e
+
+# 2. Limit CPU threading overhead to reduce memory usage in low-resource environments
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
