@@ -56,6 +56,16 @@ if settings.BACKEND_CORS_ORIGINS:
 # Mount Routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+@app.get("/", tags=["Health"])
+async def root():
+    """
+    Root endpoint returning HTTP 200 for basic platform health checks.
+    """
+    return {
+        "status": "active",
+        "message": f"{settings.PROJECT_NAME} Backend is running. Go to /health or /docs."
+    }
+
 @app.get("/health", tags=["Health"])
 async def health():
     """
