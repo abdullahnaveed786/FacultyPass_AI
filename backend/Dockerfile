@@ -30,4 +30,4 @@ COPY . .
 EXPOSE 7860
 
 # Run uvicorn server via port wrapper
-CMD ["python", "run.py"]
+CMD ["python", "main.py"]
