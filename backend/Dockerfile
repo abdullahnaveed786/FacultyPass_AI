@@ -8,10 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     wget \
     unzip \
-    && mkdir -p /root/.insightface/models/buffalo_l \
-    && wget -qO /tmp/buffalo_l.zip https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip \
-    && unzip -q /tmp/buffalo_l.zip -d /root/.insightface/models/buffalo_l \
-    && rm /tmp/buffalo_l.zip \
+    && mkdir -p /root/.insightface/models/buffalo_sc \
+    && wget -qO /tmp/buffalo_sc.zip https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_sc.zip \
+    && unzip -q /tmp/buffalo_sc.zip -d /root/.insightface/models/buffalo_sc \
+    && rm /tmp/buffalo_sc.zip \
     && apt-get purge -y --auto-remove wget unzip \
     && rm -rf /var/lib/apt/lists/*
 

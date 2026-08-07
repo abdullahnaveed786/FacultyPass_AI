@@ -12,7 +12,7 @@ class VisionService:
     InsightFace ArcFace Model Wrapper (buffalo_l backbone).
     Extracts 512-D normalized feature embeddings and 5-point facial landmarks.
     """
-    def __init__(self, name: str = 'buffalo_l', ctx_id: int = -1, det_size: Tuple[int, int] = (640, 640)):
+    def __init__(self, name: str = 'buffalo_sc', ctx_id: int = -1, det_size: Tuple[int, int] = (640, 640)):
         print(f"[INFO] Initializing InsightFace ArcFace model zoo: '{name}'...")
         # ctx_id = -1 for CPU, 0 for GPU
         # If CUDA is available, use CUDAExecutionProvider, otherwise CPUExecutionProvider
