@@ -28,6 +28,14 @@ class Settings(BaseSettings):
     # CORS Origins
     BACKEND_CORS_ORIGINS: Union[List[str], str] = ["*"]
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def clean_database_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            # asyncpg does not support 'sslmode'. Replace it with 'ssl' for SQLAlchemy translation.
+            v = v.replace("sslmode=", "ssl=")
+        return v
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
