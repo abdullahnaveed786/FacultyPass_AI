@@ -8,13 +8,17 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 
 export default function AdminDashboard() {
-  const { isAuthenticated, login, logout, API_URL } = useAuth();
+  const { token, isAuthenticated, login, logout, API_URL } = useAuth();
   const { addNotification } = useNotification();
 
   // Login form state
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Tabs state
+  const [activeTab, setActiveTab] = useState('attendance'); // 'attendance' or 'teachers'
+  const [teacherSearch, setTeacherSearch] = useState('');
 
   // Dashboard Data
   const [summary, setSummary] = useState({
@@ -58,11 +62,13 @@ export default function AdminDashboard() {
 
   // Fetch metrics & logs
   const fetchDashboardData = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !token) return;
     setIsLoading(true);
     try {
+      const headers = { Authorization: `Bearer ${token}` };
+
       // 1. Summary Metrics
-      const summaryRes = await axios.get(`${API_URL}/reports/summary`);
+      const summaryRes = await axios.get(API_URL + '/reports/summary', { headers });
       setSummary(summaryRes.data);
 
       // 2. Attendance Logs (with filter params)
@@ -72,11 +78,11 @@ export default function AdminDashboard() {
       if (filterDateFrom) params.date_from = filterDateFrom;
       if (filterDateTo) params.date_to = filterDateTo;
 
-      const logsRes = await axios.get(`${API_URL}/reports/attendance`, { params });
+      const logsRes = await axios.get(API_URL + '/reports/attendance', { params, headers });
       setLogs(logsRes.data);
 
       // 3. Teachers list (for manual override selector)
-      const teachersRes = await axios.get(`${API_URL}/reports/teachers`);
+      const teachersRes = await axios.get(API_URL + '/reports/teachers', { headers });
       setTeachers(teachersRes.data);
     } catch (err) {
       console.error(err);
@@ -89,7 +95,7 @@ export default function AdminDashboard() {
   // Refresh trigger when filter settings change or user logs in
   useEffect(() => {
     fetchDashboardData();
-  }, [isAuthenticated, filterDept, filterId, filterDateFrom, filterDateTo]);
+  }, [isAuthenticated, token, filterDept, filterId, filterDateFrom, filterDateTo]);
 
   // Handle manual override save
   const handleSaveOverride = async (e) => {
@@ -100,6 +106,7 @@ export default function AdminDashboard() {
     }
     setIsSavingOverride(true);
     try {
+      const headers = { Authorization: `Bearer ${token}` };
       const payload = {
         teacher_id: overrideData.teacherId,
         check_in_time: new Date(overrideData.checkInTime).toISOString(),
@@ -107,7 +114,7 @@ export default function AdminDashboard() {
         status: overrideData.status
       };
 
-      await axios.post(`${API_URL}/reports/attendance/override`, payload);
+      await axios.post(API_URL + '/reports/attendance/override', payload, { headers });
       addNotification('Manual override session logged.', 'success');
       setShowOverrideModal(false);
       
@@ -133,7 +140,8 @@ export default function AdminDashboard() {
   const handleDeleteLog = async (logId) => {
     if (!window.confirm('Are you sure you want to delete this attendance log?')) return;
     try {
-      await axios.delete(`${API_URL}/reports/attendance/${logId}`);
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.delete(API_URL + '/reports/attendance/' + logId, { headers });
       addNotification('Attendance log deleted.', 'success');
       fetchDashboardData();
     } catch (err) {
@@ -149,7 +157,7 @@ export default function AdminDashboard() {
       return;
     }
 
-    const headers = ['Log ID', 'Teacher ID', 'Name', 'Department', 'Date', 'Check-In', 'Check-Out', 'Total Hours', 'Status'];
+    const csvHeaders = ['Log ID', 'Teacher ID', 'Name', 'Department', 'Date', 'Check-In', 'Check-Out', 'Total Hours', 'Status'];
     const rows = logs.map(log => [
       log.id,
       log.teacher_id,
@@ -163,7 +171,7 @@ export default function AdminDashboard() {
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+      + [csvHeaders.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -173,6 +181,13 @@ export default function AdminDashboard() {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Filter teachers list
+  const filteredTeachers = teachers.filter(t => 
+    t.name.toLowerCase().includes(teacherSearch.toLowerCase()) || 
+    t.teacher_id.toLowerCase().includes(teacherSearch.toLowerCase()) ||
+    (t.department && t.department.toLowerCase().includes(teacherSearch.toLowerCase()))
+  );
 
   // Render Login state if not authenticated
   if (!isAuthenticated) {
@@ -305,150 +320,248 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Tabs Row */}
+      <div className="flex border-b border-slate-200 gap-6 text-sm font-semibold px-2">
+        <button
+          onClick={() => setActiveTab('attendance')}
+          className={`pb-3 px-1 transition relative ${
+            activeTab === 'attendance'
+              ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Attendance Logs
+        </button>
+        <button
+          onClick={() => setActiveTab('teachers')}
+          className={`pb-3 px-1 transition relative ${
+            activeTab === 'teachers'
+              ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Registered Faculty ({teachers.length})
+        </button>
+      </div>
+
       {/* Filter and Table Section */}
       <div className="glass-panel rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white">
-        
-        {/* Filters Header bar */}
-        <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col lg:flex-row items-center justify-between gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full lg:max-w-4xl">
-            {/* Filter 1 */}
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
-              <input
-                type="text"
-                placeholder="Filter Teacher ID"
-                value={filterId}
-                onChange={(e) => setFilterId(e.target.value)}
-                className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
-              />
-            </div>
-            {/* Filter 2 */}
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
-              <input
-                type="text"
-                placeholder="Filter Department"
-                value={filterDept}
-                onChange={(e) => setFilterDept(e.target.value)}
-                className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
-              />
-            </div>
-            {/* Filter 3 */}
-            <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
-              <input
-                type="date"
-                value={filterDateFrom}
-                onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
-              />
-            </div>
-            {/* Filter 4 */}
-            <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
-              <input
-                type="date"
-                value={filterDateTo}
-                onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
-              />
-            </div>
-          </div>
+        {activeTab === 'attendance' ? (
+          <>
+            {/* Filters Header bar */}
+            <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col lg:flex-row items-center justify-between gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full lg:max-w-4xl">
+                {/* Filter 1 */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                  <input
+                    type="text"
+                    placeholder="Filter Teacher ID"
+                    value={filterId}
+                    onChange={(e) => setFilterId(e.target.value)}
+                    className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
+                  />
+                </div>
+                {/* Filter 2 */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                  <input
+                    type="text"
+                    placeholder="Filter Department"
+                    value={filterDept}
+                    onChange={(e) => setFilterDept(e.target.value)}
+                    className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
+                  />
+                </div>
+                {/* Filter 3 */}
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={(e) => setFilterDateFrom(e.target.value)}
+                    className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
+                  />
+                </div>
+                {/* Filter 4 */}
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={(e) => setFilterDateTo(e.target.value)}
+                    className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
+                  />
+                </div>
+              </div>
 
-          <div className="flex gap-2 w-full lg:w-auto justify-end">
-            <button
-              onClick={fetchDashboardData}
-              disabled={isLoading}
-              className="bg-white hover:bg-slate-50 border border-slate-200 p-2 rounded-lg text-slate-500 transition shadow-sm"
-              title="Refresh logs"
-            >
-              <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
-            </button>
-            <button
-              onClick={exportToCSV}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition shadow-sm shadow-emerald-500/10"
-            >
-              <FileSpreadsheet size={15} />
-              Export CSV
-            </button>
-          </div>
-        </div>
+              <div className="flex gap-2 w-full lg:w-auto justify-end">
+                <button
+                  onClick={fetchDashboardData}
+                  disabled={isLoading}
+                  className="bg-white hover:bg-slate-50 border border-slate-200 p-2 rounded-lg text-slate-500 transition shadow-sm"
+                  title="Refresh logs"
+                >
+                  <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+                </button>
+                <button
+                  onClick={exportToCSV}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition shadow-sm shadow-emerald-500/10"
+                >
+                  <FileSpreadsheet size={15} />
+                  Export CSV
+                </button>
+              </div>
+            </div>
 
-        {/* Logs Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
-                <th className="p-4">Teacher</th>
-                <th className="p-4">Department</th>
-                <th className="p-4">Date</th>
-                <th className="p-4">Check-In</th>
-                <th className="p-4">Check-Out</th>
-                <th className="p-4">Hours</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-400">
-                    <RefreshCw className="animate-spin inline-block mr-2 text-indigo-500" size={16} />
-                    Loading attendance database records...
-                  </td>
-                </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-400">
-                    No matching attendance logs found.
-                  </td>
-                </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/40 text-slate-600 transition">
-                    <td className="p-4">
-                      <div className="font-bold text-slate-800">{log.teacher_name}</div>
-                      <div className="text-[9px] text-slate-400 font-mono mt-0.5">{log.teacher_id}</div>
-                    </td>
-                    <td className="p-4 text-slate-505">{log.teacher_department}</td>
-                    <td className="p-4 text-slate-505">{log.date}</td>
-                    <td className="p-4 font-mono text-slate-505">
-                      {new Date(log.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </td>
-                    <td className="p-4 font-mono text-slate-505">
-                      {log.check_out_time 
-                        ? new Date(log.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
-                        : '—'}
-                    </td>
-                    <td className="p-4 font-semibold text-indigo-600">
-                      {log.total_working_hours !== null ? `${log.total_working_hours.toFixed(2)}h` : '—'}
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] border ${
-                        log.status === 'CHECKED_IN'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                          : log.status === 'COMPLETED' || log.status === 'CHECKED_OUT'
-                          ? 'bg-sky-50 text-sky-700 border-sky-100'
-                          : 'bg-rose-50 text-rose-705 border-rose-100'
-                      }`}>
-                        {log.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <button
-                        onClick={() => handleDeleteLog(log.id)}
-                        className="text-rose-500 hover:text-rose-600 p-1 hover:bg-rose-50 rounded-lg transition"
-                        title="Delete log record"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
+            {/* Logs Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                    <th className="p-4">Teacher</th>
+                    <th className="p-4">Department</th>
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Check-In</th>
+                    <th className="p-4">Check-Out</th>
+                    <th className="p-4">Hours</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-center">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="8" className="p-8 text-center text-slate-400">
+                        <RefreshCw className="animate-spin inline-block mr-2 text-indigo-500" size={16} />
+                        Loading attendance database records...
+                      </td>
+                    </tr>
+                  ) : logs.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="p-8 text-center text-slate-400">
+                        No matching attendance logs found.
+                      </td>
+                    </tr>
+                  ) : (
+                    logs.map((log) => (
+                      <tr key={log.id} className="hover:bg-slate-50/40 text-slate-600 transition">
+                        <td className="p-4">
+                          <div className="font-bold text-slate-800">{log.teacher_name}</div>
+                          <div className="text-[9px] text-slate-400 font-mono mt-0.5">{log.teacher_id}</div>
+                        </td>
+                        <td className="p-4 text-slate-505">{log.teacher_department}</td>
+                        <td className="p-4 text-slate-505">{log.date}</td>
+                        <td className="p-4 font-mono text-slate-505">
+                          {new Date(log.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </td>
+                        <td className="p-4 font-mono text-slate-505">
+                          {log.check_out_time 
+                            ? new Date(log.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
+                            : '—'}
+                        </td>
+                        <td className="p-4 font-semibold text-indigo-600">
+                          {log.total_working_hours !== null ? `${log.total_working_hours.toFixed(2)}h` : '—'}
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] border ${
+                            log.status === 'CHECKED_IN'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                              : log.status === 'COMPLETED' || log.status === 'CHECKED_OUT'
+                              ? 'bg-sky-50 text-sky-700 border-sky-100'
+                              : 'bg-rose-50 text-rose-705 border-rose-100'
+                          }`}>
+                            {log.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <button
+                            onClick={() => handleDeleteLog(log.id)}
+                            className="text-rose-500 hover:text-rose-600 p-1 hover:bg-rose-50 rounded-lg transition"
+                            title="Delete log record"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Teachers Header search bar */}
+            <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between gap-4">
+              <div className="relative w-full max-w-md">
+                <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                <input
+                  type="text"
+                  placeholder="Search by ID, Name or Department"
+                  value={teacherSearch}
+                  onChange={(e) => setTeacherSearch(e.target.value)}
+                  className="w-full bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-700 outline-none transition"
+                />
+              </div>
+              <button
+                onClick={fetchDashboardData}
+                disabled={isLoading}
+                className="bg-white hover:bg-slate-50 border border-slate-200 p-2 rounded-lg text-slate-500 transition shadow-sm"
+                title="Refresh lists"
+              >
+                <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+              </button>
+            </div>
+
+            {/* Teachers Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                    <th className="p-4">Teacher ID</th>
+                    <th className="p-4">Name</th>
+                    <th className="p-4">Department</th>
+                    <th className="p-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-slate-400">
+                        <RefreshCw className="animate-spin inline-block mr-2 text-indigo-500" size={16} />
+                        Loading registered faculty records...
+                      </td>
+                    </tr>
+                  ) : filteredTeachers.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-slate-400">
+                        No registered faculty members found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTeachers.map((t) => (
+                      <tr key={t.teacher_id} className="hover:bg-slate-50/40 text-slate-600 transition">
+                        <td className="p-4 font-mono font-bold text-indigo-650">{t.teacher_id}</td>
+                        <td className="p-4 font-bold text-slate-800">{t.name}</td>
+                        <td className="p-4 text-slate-505">{t.department || 'N/A'}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] border ${
+                            t.is_active
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                              : 'bg-slate-50 text-slate-500 border-slate-100'
+                          }`}>
+                            {t.is_active ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Manual Override Modal Overlay */}
@@ -499,7 +612,7 @@ export default function AdminDashboard() {
                 <select
                   value={overrideData.status}
                   onChange={(e) => setOverrideData({ ...overrideData, status: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-sm text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-sm text-slate-700 outline-none focus:bg-white focus:border-indigo-550 transition"
                 >
                   <option value="CHECKED_IN">CHECKED_IN (Open Session)</option>
                   <option value="COMPLETED">COMPLETED (Closed Session)</option>
