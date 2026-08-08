@@ -76,3 +76,13 @@ async def health():
         "project": settings.PROJECT_NAME,
         "database": "connected"
     }
+
+@app.get("/api/v1", tags=["Health"])
+async def api_v1_root():
+    """
+    API V1 base endpoint.
+    """
+    return {
+        "status": "active",
+        "message": "FacultyPass AI API v1 endpoint active. Access specific route resources."
+    }

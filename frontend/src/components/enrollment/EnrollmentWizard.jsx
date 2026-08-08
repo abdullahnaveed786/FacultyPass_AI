@@ -327,8 +327,8 @@ export default function EnrollmentWizard() {
       {/* Top Header Card */}
       <div className="glass-panel p-6 rounded-2xl shadow-sm border border-slate-200/80 bg-white relative overflow-hidden">
         <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
-        <h2 className="text-xl font-bold flex items-center gap-3 text-indigo-650">
-          <UserPlus size={24} className="text-indigo-650" />
+        <h2 className="text-xl font-bold flex items-center gap-3 text-indigo-600">
+          <UserPlus size={24} className="text-indigo-600" />
           Multi-Pose Faculty Registration
         </h2>
         <p className="text-slate-400 text-xs mt-1">
@@ -380,7 +380,7 @@ export default function EnrollmentWizard() {
                 }
                 setStep(2);
               }}
-              className="w-full mt-4 bg-indigo-650 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/10"
+              className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/10"
             >
               Continue to Biometrics
               <ArrowRight size={18} />
