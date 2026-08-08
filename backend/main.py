@@ -1,3 +1,4 @@
+# Triggering a fresh build with buffalo_sc memory optimizations (August 8, 2026)
 import os
 import uvicorn
 import sys
