@@ -88,14 +88,19 @@ export default function EnrollmentWizard() {
   const [capturedEmbeddings, setCapturedEmbeddings] = useState({}); // { PoseName: embedding_vector }
   const [validationMsg, setValidationMsg] = useState('Camera initializing...');
   const [validationMetrics, setValidationMetrics] = useState({ yaw: 0, pitch: 0, roll: 0 });
-  const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Webcam stream & Canvas references
+  // Webcam stream & Timeout loop references
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const loopRef = useRef(null);
+  const activePoseRef = useRef(0);
+
+  // Keep activePoseRef synchronized with state to prevent closure race conditions
+  useEffect(() => {
+    activePoseRef.current = currentPoseIdx;
+  }, [currentPoseIdx]);
 
   // Check if all 5 poses are completely captured and written to state
   const isAllCaptured = Object.keys(capturedEmbeddings).length === POSES.length;
@@ -133,7 +138,7 @@ export default function EnrollmentWizard() {
       streamRef.current = null;
     }
     if (loopRef.current) {
-      clearInterval(loopRef.current);
+      clearTimeout(loopRef.current);
       loopRef.current = null;
     }
     clearCanvas();
@@ -272,58 +277,66 @@ export default function EnrollmentWizard() {
     return canvas.toDataURL('image/jpeg', 0.9);
   };
 
-  // Live validator loop
-  const runValidationLoop = () => {
-    if (loopRef.current) clearInterval(loopRef.current);
-    
-    loopRef.current = setInterval(async () => {
-      if (isValidating || isSubmitting || currentPoseIdx >= POSES.length) return;
+  // Live validator loop using recursive setTimeout (prevents overlapping ticks & concurrency jumps)
+  const tickValidation = async () => {
+    if (step !== 2 || isSubmitting) return;
 
-      const frameB64 = captureFrameB64();
-      if (!frameB64) return;
+    const localPoseIdx = activePoseRef.current;
+    if (localPoseIdx >= POSES.length) return;
 
-      setIsValidating(true);
-      const targetPose = POSES[currentPoseIdx].key;
+    const frameB64 = captureFrameB64();
+    if (!frameB64) {
+      loopRef.current = setTimeout(tickValidation, 500);
+      return;
+    }
 
-      try {
-        const response = await axios.post(`${API_URL}/enrollment/validate-pose`, {
-          image: frameB64,
-          pose_name: targetPose
-        });
+    const targetPose = POSES[localPoseIdx].key;
 
-        const { is_valid, message, yaw, pitch, roll, embedding, nose_tip, nose_pointer } = response.data;
-        setValidationMetrics({ yaw, pitch, roll });
+    try {
+      const response = await axios.post(`${API_URL}/enrollment/validate-pose`, {
+        image: frameB64,
+        pose_name: targetPose
+      });
 
-        // Update canvas guides and pointer positions
-        drawEnrollmentGuides(nose_tip, nose_pointer, targetPose, is_valid);
-
-        if (is_valid && embedding) {
-          // Pose successfully captured and validated
-          setCapturedEmbeddings(prev => {
-            const next = { ...prev, [targetPose]: embedding };
-            
-            // Check if this was the last pose and trigger transition
-            if (Object.keys(next).length === POSES.length) {
-              setValidationMsg('All poses captured! Processing registration...');
-              stopWebcam();
-              setCurrentPoseIdx(POSES.length); // complete
-            }
-            return next;
-          });
-          
-          if (currentPoseIdx < POSES.length - 1) {
-            setCurrentPoseIdx(prev => prev + 1);
-            setValidationMsg('Hold pose...');
-          }
-        } else {
-          setValidationMsg(message);
-        }
-      } catch (err) {
-        console.error('Validation error', err);
-      } finally {
-        setIsValidating(false);
+      // Discard responses if the user reset or advanced past this pose during the API call
+      if (activePoseRef.current !== localPoseIdx || step !== 2) {
+        return;
       }
-    }, 500); // Poll faster (500ms) for extremely smooth, real-time visual alignment
+
+      const { is_valid, message, yaw, pitch, roll, embedding, nose_tip, nose_pointer } = response.data;
+      setValidationMetrics({ yaw, pitch, roll });
+
+      // Update canvas guides and pointer positions
+      drawEnrollmentGuides(nose_tip, nose_pointer, targetPose, is_valid);
+
+      if (is_valid && embedding) {
+        setCapturedEmbeddings(prev => {
+          const next = { ...prev, [targetPose]: embedding };
+          
+          // Trigger successful complete state only when the 5th pose is fully in state
+          if (Object.keys(next).length === POSES.length) {
+            setValidationMsg('All poses captured! Processing registration...');
+            stopWebcam();
+            setCurrentPoseIdx(POSES.length); // complete
+          }
+          return next;
+        });
+        
+        if (localPoseIdx < POSES.length - 1) {
+          setCurrentPoseIdx(localPoseIdx + 1);
+          setValidationMsg('Hold pose...');
+        }
+      } else {
+        setValidationMsg(message);
+      }
+    } catch (err) {
+      print("Validation error: " + err);
+    }
+
+    // Schedule the next frame only if the active pose index has not changed/completed
+    if (activePoseRef.current === localPoseIdx && localPoseIdx < POSES.length && step === 2) {
+      loopRef.current = setTimeout(tickValidation, 500);
+    }
   };
 
   // Start webcam when step changes to face capture
@@ -339,12 +352,16 @@ export default function EnrollmentWizard() {
   // Restart validation loop when current pose index changes
   useEffect(() => {
     if (step === 2 && currentPoseIdx < POSES.length) {
-      runValidationLoop();
+      if (loopRef.current) clearTimeout(loopRef.current);
+      
       // Draw static guide rings immediately for new pose target
       drawEnrollmentGuides(null, null, POSES[currentPoseIdx].key, false);
+      
+      // Run first loop tick
+      loopRef.current = setTimeout(tickValidation, 300);
     }
     return () => {
-      if (loopRef.current) clearInterval(loopRef.current);
+      if (loopRef.current) clearTimeout(loopRef.current);
     };
   }, [step, currentPoseIdx]);
 
@@ -476,8 +493,8 @@ export default function EnrollmentWizard() {
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
                   Target: {POSES[currentPoseIdx]?.label || 'Completed'}
                 </span>
-                <span>Yaw: <b className="text-slate-505">{Math.round(validationMetrics.yaw)}°</b></span>
-                <span>Pitch: <b className="text-slate-505">{Math.round(validationMetrics.pitch)}°</b></span>
+                <span>Yaw: <b className="text-slate-550">{Math.round(validationMetrics.yaw)}°</b></span>
+                <span>Pitch: <b className="text-slate-555">{Math.round(validationMetrics.pitch)}°</b></span>
               </div>
 
               {/* Status bar */}
