@@ -311,8 +311,6 @@ export default function EnrollmentWizard() {
             return next;
           });
           
-          addNotification(`Validated pose: ${POSES[currentPoseIdx].label}`, 'success');
-          
           if (currentPoseIdx < POSES.length - 1) {
             setCurrentPoseIdx(prev => prev + 1);
             setValidationMsg('Hold pose...');
