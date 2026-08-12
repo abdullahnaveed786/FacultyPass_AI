@@ -4,6 +4,65 @@ import { Camera, CheckCircle, AlertTriangle, RefreshCw, UserCheck, ArrowRight, U
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 
+// Visual direction guide SVG graphic for current pose target
+const PoseGuideGraphic = ({ poseKey }) => {
+  switch (poseKey) {
+    case 'FRONT':
+      return (
+        <svg className="w-14 h-14 text-indigo-600 animate-pulse" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+          <circle cx="32" cy="32" r="8" fill="currentColor" opacity="0.15" />
+          <circle cx="32" cy="32" r="3.5" fill="currentColor" />
+          {/* Face shape outline */}
+          <path d="M22 28 C22 19, 42 19, 42 28 C42 38, 22 38, 22 28 Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M27 43 C27 43, 32 46, 37 43" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case 'LEFT':
+      return (
+        <svg className="w-14 h-14 text-indigo-600" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" />
+          {/* Head silhouette turning left */}
+          <path d="M37 20 C32 18, 24 22, 24 29 C24 35, 28 41, 35 41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          {/* Left indicator arrow */}
+          <path d="M43 31 H25 M31 25 L25 31 L31 37" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse" />
+        </svg>
+      );
+    case 'RIGHT':
+      return (
+        <svg className="w-14 h-14 text-indigo-600" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" />
+          {/* Head silhouette turning right */}
+          <path d="M27 20 C32 18, 40 22, 40 29 C40 35, 36 41, 29 41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          {/* Right indicator arrow */}
+          <path d="M21 31 H39 M33 25 L39 31 L33 37" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse" />
+        </svg>
+      );
+    case 'UP':
+      return (
+        <svg className="w-14 h-14 text-indigo-600" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" />
+          {/* Head silhouette tilting up */}
+          <path d="M25 35 C25 29, 28 20, 32 20 C36 20, 39 29, 39 35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          {/* Upward indicator arrow */}
+          <path d="M32 41 V23 M26 29 L32 23 L38 29" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse" />
+        </svg>
+      );
+    case 'DOWN':
+      return (
+        <svg className="w-14 h-14 text-indigo-600" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" />
+          {/* Head silhouette tilting down */}
+          <path d="M25 25 C25 31, 28 39, 32 39 C36 39, 39 31, 39 25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          {/* Downward indicator arrow */}
+          <path d="M32 21 V39 M26 33 L32 39 L38 33" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+};
+
 export default function EnrollmentWizard() {
   const { API_URL } = useAuth();
   const { addNotification } = useNotification();
@@ -19,10 +78,10 @@ export default function EnrollmentWizard() {
   // Pose configuration
   const POSES = [
     { key: 'FRONT', label: 'Frontal Center', instruction: 'Look directly at the camera, placing the green dot in the center ring.' },
-    { key: 'LEFT', label: 'Look Left', instruction: 'Turn your head slightly to your LEFT, moving the dot to the left ring.' },
-    { key: 'RIGHT', label: 'Look Right', instruction: 'Turn your head slightly to your RIGHT, moving the dot to the right ring.' },
-    { key: 'UP', label: 'Look Up', instruction: 'Tilt your chin UPWARDS, moving the dot to the upper ring.' },
-    { key: 'DOWN', label: 'Look Down', instruction: 'Tilt your chin DOWNWARDS, moving the dot to the lower ring.' },
+    { key: 'LEFT', label: 'Look Left', instruction: 'Slowly turn your head from the CENTER to the LEFT, moving the dot to the left target zone.' },
+    { key: 'RIGHT', label: 'Look Right', instruction: 'Slowly turn your head from the CENTER to the RIGHT, moving the dot to the right target zone.' },
+    { key: 'UP', label: 'Look Up', instruction: 'Slowly tilt your chin from the CENTER UPWARDS, moving the dot to the upper target zone.' },
+    { key: 'DOWN', label: 'Look Down', instruction: 'Slowly tilt your chin from the CENTER DOWNWARDS, moving the dot to the lower target zone.' },
   ];
 
   const [currentPoseIdx, setCurrentPoseIdx] = useState(0);
@@ -37,6 +96,9 @@ export default function EnrollmentWizard() {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const loopRef = useRef(null);
+
+  // Check if all 5 poses are completely captured and written to state
+  const isAllCaptured = Object.keys(capturedEmbeddings).length === POSES.length;
 
   // Start webcam
   const startWebcam = async () => {
@@ -237,20 +299,23 @@ export default function EnrollmentWizard() {
 
         if (is_valid && embedding) {
           // Pose successfully captured and validated
-          setCapturedEmbeddings(prev => ({
-            ...prev,
-            [targetPose]: embedding
-          }));
+          setCapturedEmbeddings(prev => {
+            const next = { ...prev, [targetPose]: embedding };
+            
+            // Check if this was the last pose and trigger transition
+            if (Object.keys(next).length === POSES.length) {
+              setValidationMsg('All poses captured! Processing registration...');
+              stopWebcam();
+              setCurrentPoseIdx(POSES.length); // complete
+            }
+            return next;
+          });
           
           addNotification(`Validated pose: ${POSES[currentPoseIdx].label}`, 'success');
           
           if (currentPoseIdx < POSES.length - 1) {
             setCurrentPoseIdx(prev => prev + 1);
             setValidationMsg('Hold pose...');
-          } else {
-            setValidationMsg('All poses captured! Processing registration...');
-            stopWebcam();
-            setCurrentPoseIdx(POSES.length); // complete
           }
         } else {
           setValidationMsg(message);
@@ -260,7 +325,7 @@ export default function EnrollmentWizard() {
       } finally {
         setIsValidating(false);
       }
-    }, 1200); // Poll slightly faster for better interactive feedback
+    }, 500); // Poll faster (500ms) for extremely smooth, real-time visual alignment
   };
 
   // Start webcam when step changes to face capture
@@ -362,7 +427,7 @@ export default function EnrollmentWizard() {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Department</label>
+              <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-2">Department</label>
               <input
                 type="text"
                 value={formData.department}
@@ -411,19 +476,19 @@ export default function EnrollmentWizard() {
               <div className="absolute top-3 left-3 bg-white/95 backdrop-blur border border-slate-200 text-[10px] font-sans py-1.5 px-3 rounded-lg text-slate-700 shadow-sm flex gap-4">
                 <span className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                  Target: {POSES[currentPoseIdx]?.label}
+                  Target: {POSES[currentPoseIdx]?.label || 'Completed'}
                 </span>
-                <span>Yaw: <b className="text-slate-500">{Math.round(validationMetrics.yaw)}°</b></span>
-                <span>Pitch: <b className="text-slate-500">{Math.round(validationMetrics.pitch)}°</b></span>
+                <span>Yaw: <b className="text-slate-505">{Math.round(validationMetrics.yaw)}°</b></span>
+                <span>Pitch: <b className="text-slate-505">{Math.round(validationMetrics.pitch)}°</b></span>
               </div>
 
               {/* Status bar */}
               <div className={`absolute bottom-0 left-0 right-0 py-3.5 px-4 bg-white/95 backdrop-blur border-t border-slate-200 flex items-center gap-3 ${
-                currentPoseIdx === POSES.length 
+                isAllCaptured 
                   ? 'text-emerald-700'
                   : 'text-indigo-600'
               }`}>
-                {currentPoseIdx === POSES.length ? (
+                {isAllCaptured ? (
                   <>
                     <CheckCircle size={18} className="text-emerald-500 animate-pulse" />
                     <span className="font-bold text-xs">All 5 poses successfully captured!</span>
@@ -438,17 +503,17 @@ export default function EnrollmentWizard() {
               </div>
             </div>
 
-            {/* Instruction Callout */}
+            {/* Instruction Callout with Visual SVG Directional Hint */}
             {currentPoseIdx < POSES.length && (
-              <div className="bg-indigo-50/50 border border-indigo-100/50 p-4 rounded-xl flex items-start gap-3.5">
-                <div className="p-2.5 bg-indigo-100/60 rounded-xl text-indigo-600 mt-0.5 border border-indigo-200/20">
-                  <Camera size={20} />
+              <div className="bg-indigo-50/50 border border-indigo-100/50 p-4 rounded-xl flex items-center gap-4">
+                <div className="flex-shrink-0 p-1.5 bg-white rounded-xl border border-indigo-100/50 shadow-sm">
+                  <PoseGuideGraphic poseKey={POSES[currentPoseIdx].key} />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h4 className="font-bold text-indigo-700 text-sm">
                     Pose {currentPoseIdx + 1}/5: {POSES[currentPoseIdx].label}
                   </h4>
-                  <p className="text-slate-500 text-xs mt-1.5 leading-relaxed font-medium">
+                  <p className="text-slate-500 text-xs mt-1 leading-relaxed font-medium">
                     {POSES[currentPoseIdx].instruction}
                   </p>
                 </div>
@@ -460,7 +525,7 @@ export default function EnrollmentWizard() {
           <div className="space-y-4">
             <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-505">Capture Checklist</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Capture Checklist</h3>
                 <HelpCircle size={16} className="text-slate-400" title="Align the pointer dot in the target rings to complete each pose." />
               </div>
               <div className="space-y-2.5">
@@ -495,11 +560,11 @@ export default function EnrollmentWizard() {
             </div>
 
             {/* Registration trigger */}
-            {currentPoseIdx === POSES.length ? (
+            {isAllCaptured ? (
               <button
                 onClick={handleRegisterSubmit}
                 disabled={isSubmitting}
-                className="w-full bg-emerald-650 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/10"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-md shadow-emerald-500/10"
               >
                 {isSubmitting ? (
                   <>

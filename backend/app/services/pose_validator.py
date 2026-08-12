@@ -146,30 +146,30 @@ def validate_pose_orientation(face: Any, target_pose: str, img_w: int = 640, img
         return True, "Pose Validated", (yaw, pitch, roll)
 
     elif pose in ("LEFT", "LOOK LEFT"):
-        if yaw < 12.0:
-            return False, "Please turn your head slightly further to your LEFT.", (yaw, pitch, roll)
-        if abs(pitch) > 15.0 or abs(roll) > 15.0:
+        if yaw < 10.0:
+            return False, "Please turn your head slowly to your LEFT.", (yaw, pitch, roll)
+        if abs(pitch) > 20.0 or abs(roll) > 20.0:
             return False, "Please keep your head level while looking left.", (yaw, pitch, roll)
         return True, "Pose Validated", (yaw, pitch, roll)
 
     elif pose in ("RIGHT", "LOOK RIGHT"):
-        if yaw > -12.0:
-            return False, "Please turn your head slightly further to your RIGHT.", (yaw, pitch, roll)
-        if abs(pitch) > 15.0 or abs(roll) > 15.0:
+        if yaw > -10.0:
+            return False, "Please turn your head slowly to your RIGHT.", (yaw, pitch, roll)
+        if abs(pitch) > 20.0 or abs(roll) > 20.0:
             return False, "Please keep your head level while looking right.", (yaw, pitch, roll)
         return True, "Pose Validated", (yaw, pitch, roll)
 
     elif pose in ("UP", "LOOK UP"):
-        if pitch < 12.0:
-            return False, "Please tilt your head slightly UPWARDS.", (yaw, pitch, roll)
-        if abs(yaw) > 15.0 or abs(roll) > 15.0:
+        if pitch < 10.0:
+            return False, "Please tilt your head slowly UPWARDS.", (yaw, pitch, roll)
+        if abs(yaw) > 20.0 or abs(roll) > 20.0:
             return False, "Please keep your face centered while looking up.", (yaw, pitch, roll)
         return True, "Pose Validated", (yaw, pitch, roll)
 
     elif pose in ("DOWN", "LOOK DOWN"):
-        if pitch > -12.0:
-            return False, "Please tilt your head slightly DOWNWARDS.", (yaw, pitch, roll)
-        if abs(yaw) > 15.0 or abs(roll) > 15.0:
+        if pitch > -10.0:
+            return False, "Please tilt your head slowly DOWNWARDS.", (yaw, pitch, roll)
+        if abs(yaw) > 20.0 or abs(roll) > 20.0:
             return False, "Please keep your face centered while looking down.", (yaw, pitch, roll)
         return True, "Pose Validated", (yaw, pitch, roll)
 
