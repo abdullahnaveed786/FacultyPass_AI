@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Users, UserCheck, Clock, ShieldAlert, Search, RefreshCw, 
-  Calendar, FileSpreadsheet, Lock, LogOut, CheckCircle2, PlusCircle, Trash2 
+  Calendar, FileSpreadsheet, Lock, LogOut, CheckCircle2, PlusCircle, Trash2, Eye, EyeOff 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
@@ -14,6 +14,7 @@ export default function AdminDashboard() {
   // Login form state
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Tabs state
@@ -217,13 +218,22 @@ export default function AdminDashboard() {
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-2">Password</label>
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2 px-3.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2 pl-3.5 pr-10 text-sm text-slate-800 placeholder-slate-400 outline-none transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-650 transition"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             <button
@@ -277,7 +287,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1 */}
         <div className="glass-panel p-5 rounded-2xl flex items-center gap-4 border border-slate-200 bg-white shadow-sm">
-          <div className="p-3 bg-indigo-50 text-indigo-650 rounded-xl border border-indigo-100/50">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100/50">
             <Users size={22} className="text-indigo-600" />
           </div>
           <div>
@@ -542,7 +552,7 @@ export default function AdminDashboard() {
                   ) : (
                     filteredTeachers.map((t) => (
                       <tr key={t.teacher_id} className="hover:bg-slate-50/40 text-slate-600 transition">
-                        <td className="p-4 font-mono font-bold text-indigo-650">{t.teacher_id}</td>
+                        <td className="p-4 font-mono font-bold text-indigo-600">{t.teacher_id}</td>
                         <td className="p-4 font-bold text-slate-800">{t.name}</td>
                         <td className="p-4 text-slate-505">{t.department || 'N/A'}</td>
                         <td className="p-4">
@@ -630,7 +640,7 @@ export default function AdminDashboard() {
                 <button
                   type="submit"
                   disabled={isSavingOverride}
-                  className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-500/10 transition"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-500/10 transition"
                 >
                   {isSavingOverride && <RefreshCw size={14} className="animate-spin" />}
                   Save Session
