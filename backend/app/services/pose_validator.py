@@ -146,14 +146,14 @@ def validate_pose_orientation(face: Any, target_pose: str, img_w: int = 640, img
         return True, "Pose Validated", (yaw, pitch, roll)
 
     elif pose in ("LEFT", "LOOK LEFT"):
-        if yaw < 10.0:
+        if yaw > -10.0:
             return False, "Please turn your head slowly to your LEFT.", (yaw, pitch, roll)
         if abs(pitch) > 20.0 or abs(roll) > 20.0:
             return False, "Please keep your head level while looking left.", (yaw, pitch, roll)
         return True, "Pose Validated", (yaw, pitch, roll)
 
     elif pose in ("RIGHT", "LOOK RIGHT"):
-        if yaw > -10.0:
+        if yaw < 10.0:
             return False, "Please turn your head slowly to your RIGHT.", (yaw, pitch, roll)
         if abs(pitch) > 20.0 or abs(roll) > 20.0:
             return False, "Please keep your head level while looking right.", (yaw, pitch, roll)
@@ -174,3 +174,48 @@ def validate_pose_orientation(face: Any, target_pose: str, img_w: int = 640, img
         return True, "Pose Validated", (yaw, pitch, roll)
 
     return False, f"Unknown target pose: {target_pose}", (yaw, pitch, roll)
+
+
+def calculate_eye_liveness(kps: np.ndarray, frame_bgr: np.ndarray) -> Tuple[float, bool]:
+    """
+    Anti-Spoofing Eye Liveness Detector.
+    Crops eye regions using 5-point facial landmarks and calculates Laplacian texture variance.
+    Returns (openness_score, is_eye_open).
+    """
+    if frame_bgr is None or kps is None or len(kps) < 2:
+        return 0.0, True
+
+    h_img, w_img, _ = frame_bgr.shape
+    left_eye = kps[0]
+    right_eye = kps[1]
+
+    # Calculate eye distance for dynamic scaling
+    eye_dist = np.linalg.norm(left_eye - right_eye)
+    if eye_dist < 10:
+        return 0.0, True
+
+    patch_w = int(max(8, eye_dist * 0.25))
+    patch_h = int(max(6, eye_dist * 0.18))
+
+    variances = []
+    gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+
+    for eye in (left_eye, right_eye):
+        ex, ey = int(eye[0]), int(eye[1])
+        y1, y2 = max(0, ey - patch_h), min(h_img, ey + patch_h)
+        x1, x2 = max(0, ex - patch_w), min(w_img, ex + patch_w)
+
+        if y2 > y1 and x2 > x1:
+            eye_crop = gray[y1:y2, x1:x2]
+            # Compute Laplacian variance for texture/contrast
+            var = cv2.Laplacian(eye_crop, cv2.CV_64F).var()
+            variances.append(var)
+
+    if not variances:
+        return 0.0, True
+
+    avg_var = float(np.mean(variances))
+    # Threshold: Open eyes have higher texture variance (> 8.0), closed/blinked eyes drop (< 8.0)
+    is_open = avg_var > 8.0
+
+    return round(avg_var, 2), is_open

@@ -38,7 +38,7 @@ services:
     container_name: fastapi_backend
     restart: always
     ports:
-      - "8000:7860"
+      - "8000:8000"
     volumes:
       - ./backend:/app
       - insightface_models:/root/.insightface/models

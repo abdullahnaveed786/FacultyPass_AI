@@ -178,10 +178,10 @@ export default function EnrollmentWizard() {
     let targetLabel = "Look Straight";
 
     if (targetPose === 'LEFT') {
-      targetX = W / 2 - 95; // Move circle to target LEFT
+      targetX = W / 2 + 95; // Physical LEFT moves nose pointer to screen RIGHT on mirrored canvas
       targetLabel = "Turn Left ➔"; 
     } else if (targetPose === 'RIGHT') {
-      targetX = W / 2 + 95; // Move circle to target RIGHT
+      targetX = W / 2 - 95; // Physical RIGHT moves nose pointer to screen LEFT on mirrored canvas
       targetLabel = "◀ Turn Right";
     } else if (targetPose === 'UP') {
       targetY = H / 2 - 70; // Move circle UP
@@ -330,7 +330,7 @@ export default function EnrollmentWizard() {
         setValidationMsg(message);
       }
     } catch (err) {
-      print("Validation error: " + err);
+      console.error("Validation error: ", err);
     }
 
     // Schedule the next frame only if the active pose index has not changed/completed

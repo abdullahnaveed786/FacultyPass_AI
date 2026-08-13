@@ -4,8 +4,8 @@ import { useNotification } from './NotificationContext';
 
 const AuthContext = createContext(null);
 
-// Get base url dynamically or fall back to localhost port 8000
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+// Get base url dynamically or fall back to localhost port 7860
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7860/api/v1';
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('fp_admin_token') || null);
