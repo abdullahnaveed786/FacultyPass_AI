@@ -78,8 +78,8 @@ export default function EnrollmentWizard() {
   // Pose configuration
   const POSES = [
     { key: 'FRONT', label: 'Frontal Center', instruction: 'Look directly at the camera, placing the green dot in the center ring.' },
-    { key: 'LEFT', label: 'Look Right', instruction: 'Slowly turn your head to your RIGHT, moving the dot to the target zone.' },
-    { key: 'RIGHT', label: 'Look Left', instruction: 'Slowly turn your head to your LEFT, moving the dot to the target zone.' },
+    { key: 'LEFT', label: 'Look Left', instruction: 'Slowly turn your head to place the dot inside the target zone.' },
+    { key: 'RIGHT', label: 'Look Right', instruction: 'Slowly turn your head to place the dot inside the target zone.' },
     { key: 'UP', label: 'Look Up', instruction: 'Slowly tilt your chin from the CENTER UPWARDS, moving the dot to the upper target zone.' },
     { key: 'DOWN', label: 'Look Down', instruction: 'Slowly tilt your chin from the CENTER DOWNWARDS, moving the dot to the lower target zone.' },
   ];
