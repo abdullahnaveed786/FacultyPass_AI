@@ -369,6 +369,14 @@ export default function EnrollmentWizard() {
   const handleRegisterSubmit = async () => {
     setIsSubmitting(true);
     try {
+      // Validate that all embeddings exist and are non-empty arrays
+      const missingPoses = POSES.filter(pose => !capturedEmbeddings[pose.key] || !Array.isArray(capturedEmbeddings[pose.key]));
+      if (missingPoses.length > 0) {
+        addNotification(`Missing face capture data for: ${missingPoses.map(p => p.label).join(', ')}. Please re-capture.`, 'warning');
+        setIsSubmitting(false);
+        return;
+      }
+
       const embeddingsList = POSES.map(pose => ({
         pose_name: pose.key,
         embedding: capturedEmbeddings[pose.key]
@@ -381,12 +389,22 @@ export default function EnrollmentWizard() {
         embeddings: embeddingsList
       });
 
-      addNotification(`Teacher ${formData.name} registered successfully!`, 'success');
+      addNotification(`Teacher "${formData.name}" registered successfully!`, 'success');
       resetWizard();
     } catch (err) {
-      console.error(err);
-      const detail = err.response?.data?.detail || 'Registration failed.';
-      addNotification(detail, 'error');
+      console.error("Registration submit error:", err);
+      let errorMsg = 'Registration failed.';
+      if (err.response?.data?.detail) {
+        const d = err.response.data.detail;
+        if (typeof d === 'string') {
+          errorMsg = d;
+        } else if (Array.isArray(d)) {
+          errorMsg = d.map(item => item.msg || JSON.stringify(item)).join('; ');
+        } else if (typeof d === 'object') {
+          errorMsg = JSON.stringify(d);
+        }
+      }
+      addNotification(errorMsg, 'error');
     } finally {
       setIsSubmitting(false);
     }
