@@ -178,16 +178,18 @@ def validate_pose_orientation(face: Any, target_pose: str, img_w: int = 640, img
 
 def calculate_eye_liveness(kps: np.ndarray, frame_bgr: np.ndarray) -> Tuple[float, bool]:
     """
-    Anti-Spoofing Eye Liveness Detector.
-    Crops eye regions using 5-point facial landmarks and calculates Laplacian texture variance.
+    Normalized Anti-Spoofing Eye Liveness Detector.
+    Crops eye regions and cheek/forehead skin control region.
+    Calculates normalized contrast ratio and eye openness score.
     Returns (openness_score, is_eye_open).
     """
-    if frame_bgr is None or kps is None or len(kps) < 2:
+    if frame_bgr is None or kps is None or len(kps) < 3:
         return 0.0, True
 
     h_img, w_img, _ = frame_bgr.shape
     left_eye = kps[0]
     right_eye = kps[1]
+    nose = kps[2]
 
     # Calculate eye distance for dynamic scaling
     eye_dist = np.linalg.norm(left_eye - right_eye)
@@ -197,9 +199,21 @@ def calculate_eye_liveness(kps: np.ndarray, frame_bgr: np.ndarray) -> Tuple[floa
     patch_w = int(max(8, eye_dist * 0.25))
     patch_h = int(max(6, eye_dist * 0.18))
 
-    variances = []
     gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
 
+    # 1. Skin control patch (forehead / upper nose bridge between eyes)
+    skin_x = int((left_eye[0] + right_eye[0]) / 2.0)
+    skin_y = int(min(left_eye[1], right_eye[1]) - patch_h)
+    skin_y1, skin_y2 = max(0, skin_y - patch_h), min(h_img, skin_y + patch_h)
+    skin_x1, skin_x2 = max(0, skin_x - patch_w), min(w_img, skin_x + patch_w)
+
+    skin_var = 5.0
+    if skin_y2 > skin_y1 and skin_x2 > skin_x1:
+        skin_crop = gray[skin_y1:skin_y2, skin_x1:skin_x2]
+        skin_var = max(1.0, cv2.Laplacian(skin_crop, cv2.CV_64F).var())
+
+    # 2. Eye patches
+    eye_variances = []
     for eye in (left_eye, right_eye):
         ex, ey = int(eye[0]), int(eye[1])
         y1, y2 = max(0, ey - patch_h), min(h_img, ey + patch_h)
@@ -207,15 +221,20 @@ def calculate_eye_liveness(kps: np.ndarray, frame_bgr: np.ndarray) -> Tuple[floa
 
         if y2 > y1 and x2 > x1:
             eye_crop = gray[y1:y2, x1:x2]
-            # Compute Laplacian variance for texture/contrast
             var = cv2.Laplacian(eye_crop, cv2.CV_64F).var()
-            variances.append(var)
+            eye_variances.append(var)
 
-    if not variances:
+    if not eye_variances:
         return 0.0, True
 
-    avg_var = float(np.mean(variances))
-    # Threshold: Open eyes have higher texture variance (> 8.0), closed/blinked eyes drop (< 8.0)
-    is_open = avg_var > 8.0
+    avg_eye_var = float(np.mean(eye_variances))
+    # Normalized contrast ratio: pupil/sclera has high variance compared to smooth skin
+    contrast_ratio = (avg_eye_var + 2.0) / (skin_var + 2.0)
+    
+    # Openness metric combining raw variance and skin contrast ratio
+    openness_score = round(float(avg_eye_var * 0.15 + contrast_ratio * 3.0), 2)
+    
+    # Open eyes have higher relative contrast (> 3.5), closed/blinked eyes drop (< 3.5)
+    is_open = openness_score > 3.5
 
-    return round(avg_var, 2), is_open
+    return openness_score, is_open
