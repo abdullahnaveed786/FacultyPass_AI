@@ -1,6 +1,5 @@
 # Environment Configurations (Credentials & Secrets)
 .env
-.env.example
 .env.local
 .env.*.local
 
