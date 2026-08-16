@@ -8,6 +8,7 @@ from app.database import get_db
 from app.services.vision_service import vision_service, decode_base64_image
 from app.services.biometric_service import identify_teacher_from_vector
 from app.services.attendance_service import AttendanceService
+from app.services.pose_validator import calculate_eye_liveness
 
 router = APIRouter()
 
@@ -28,6 +29,8 @@ class IdentificationDetail(BaseModel):
     similarity_score: float
     bbox_coordinates: Dict[str, int]
     timestamp: str
+    eye_openness: float = 0.0
+    is_eye_open: bool = True
 
 class IdentificationResponse(BaseModel):
     status: str  # 'SUCCESS', 'NO_FACE_DETECTED'
@@ -88,8 +91,10 @@ async def identify_face(payload: VerificationRequest, db: AsyncSession = Depends
 
         # Run biometric identification against pgvector
         teacher, matched_pose, score = await identify_teacher_from_vector(face.embedding, db)
-
         timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Calculate eye liveness / blink metrics
+        openness, is_open = calculate_eye_liveness(face.kps, frame_bgr)
 
         if teacher:
             detections_log.append(IdentificationDetail(
@@ -99,7 +104,9 @@ async def identify_face(payload: VerificationRequest, db: AsyncSession = Depends
                 matched_pose=matched_pose,
                 similarity_score=round(score, 4),
                 bbox_coordinates={"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax},
-                timestamp=timestamp_str
+                timestamp=timestamp_str,
+                eye_openness=openness,
+                is_eye_open=is_open
             ))
 
     return IdentificationResponse(

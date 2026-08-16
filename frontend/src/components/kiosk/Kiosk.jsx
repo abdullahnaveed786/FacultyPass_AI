@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { Camera, Shield, RefreshCw, AlertCircle, ArrowLeftRight, LogIn, LogOut, CheckCircle2, VideoOff } from 'lucide-react';
+import { Camera, Shield, RefreshCw, AlertCircle, ArrowLeftRight, LogIn, LogOut, CheckCircle2, VideoOff, Eye, ShieldCheck, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -19,6 +19,14 @@ export default function Kiosk() {
   const [isInitializing, setIsInitializing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [mode, setMode] = useState('CHECK_IN'); // 'CHECK_IN' or 'CHECK_OUT'
+
+  // Anti-Spoofing Blink Verification State Machine
+  const [isLivenessVerified, setIsLivenessVerified] = useState(false);
+  const [livenessStatus, setLivenessStatus] = useState('IDLE'); // 'IDLE', 'WAITING_BLINK', 'BLINK_DETECTED', 'VERIFIED'
+  const [livenessMessage, setLivenessMessage] = useState('');
+  const [currentOpennessScore, setCurrentOpennessScore] = useState(0.0);
+  const livenessStepRef = useRef('IDLE');
+  const peakOpennessRef = useRef(1.0);
 
   // Live Digital Clock
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -107,6 +115,10 @@ export default function Kiosk() {
       setIsKioskActive(false);
       setActiveDetections([]);
       setIdentifiedTeacher(null);
+      livenessStepRef.current = 'IDLE';
+      setLivenessStatus('IDLE');
+      setIsLivenessVerified(false);
+      setLivenessMessage('');
       clearCanvas();
       if (showNotification) {
         addNotification('Doorway Kiosk stopped.', 'info');
@@ -157,15 +169,59 @@ export default function Kiosk() {
         // Find the first recognized face
         const firstMatch = detections.find(d => d.teacher_id && d.teacher_id !== 'N/A');
         if (firstMatch) {
-          setIdentifiedTeacher(firstMatch);
+          const score = firstMatch.eye_openness ?? 4.0;
+          const isEyeOpen = firstMatch.is_eye_open ?? true;
+          setCurrentOpennessScore(score);
+
+          setIdentifiedTeacher(prev => {
+            if (!prev || prev.teacher_id !== firstMatch.teacher_id) {
+              livenessStepRef.current = 'WAITING_BLINK';
+              setLivenessStatus('WAITING_BLINK');
+              setIsLivenessVerified(false);
+              peakOpennessRef.current = Math.max(score, 2.0);
+              setLivenessMessage('👁️ ANTI-SPOOFING CHECK: Please BLINK your eyes once to verify liveness.');
+            }
+            return firstMatch;
+          });
+
+          // Dynamic peak tracking
+          if (score > peakOpennessRef.current) {
+            peakOpennessRef.current = score;
+          }
+
+          const relativeRatio = score / (peakOpennessRef.current || 1.0);
+
+          if (livenessStepRef.current === 'WAITING_BLINK') {
+            if (!isEyeOpen || relativeRatio < 0.65) {
+              livenessStepRef.current = 'BLINK_DETECTED';
+              setLivenessStatus('BLINK_DETECTED');
+              setLivenessMessage('🙈 Blink detected! Re-open eyes to complete verification...');
+            }
+          } else if (livenessStepRef.current === 'BLINK_DETECTED') {
+            if (isEyeOpen && relativeRatio > 0.75) {
+              livenessStepRef.current = 'VERIFIED';
+              setLivenessStatus('VERIFIED');
+              setIsLivenessVerified(true);
+              setLivenessMessage('✅ Anti-Spoofing Passed: Real Person Verified!');
+            }
+          }
         } else {
           setIdentifiedTeacher(null);
+          livenessStepRef.current = 'IDLE';
+          setLivenessStatus('IDLE');
+          setIsLivenessVerified(false);
+          setLivenessMessage('');
+          setCurrentOpennessScore(0.0);
         }
         
         drawBoundingBoxes(detections);
       } else {
         setActiveDetections([]);
         setIdentifiedTeacher(null);
+        livenessStepRef.current = 'IDLE';
+        setLivenessStatus('IDLE');
+        setIsLivenessVerified(false);
+        setLivenessMessage('');
         clearCanvas();
       }
     } catch (err) {
@@ -181,6 +237,11 @@ export default function Kiosk() {
   // Explicit confirmation submit handler
   const handleConfirmAttendance = async () => {
     if (!identifiedTeacher) return;
+
+    if (!isLivenessVerified) {
+      addNotification('🛡️ Anti-Spoofing Security: Please blink your eyes once to verify you are a live person!', 'warning', 4000);
+      return;
+    }
     setIsConfirming(true);
     try {
       const response = await axios.post(`${API_URL}/verification/confirm`, {
@@ -245,7 +306,12 @@ export default function Kiosk() {
       const startY = ymin * scaleY;
 
       const isKnown = det.teacher_id !== 'N/A';
-      const color = isKnown ? '#10b981' : '#f43f5e'; // Emerald green or Rose red
+      const isThisVerified = isKnown && isLivenessVerified;
+      const color = isThisVerified 
+        ? '#10b981' // Green when live & verified
+        : isKnown 
+        ? '#f59e0b' // Amber when recognized but pending blink on this face
+        : '#f43f5e'; // Red for unknown faces
 
       // Bounding box with clean rounded joins
       ctx.strokeStyle = color;
@@ -256,11 +322,13 @@ export default function Kiosk() {
       // Label background (clean pill tag)
       ctx.fillStyle = color;
       const labelText = isKnown 
-        ? `${det.name} (${(det.similarity_score * 100).toFixed(0)}%)` 
-        : `Unknown Person`;
+        ? isThisVerified
+          ? `✅ ${det.name} (Verified Live)`
+          : `👁️ ${det.name} (Blink Required)`
+        : `🚫 Unknown Person`;
       
       ctx.font = 'bold 11px Inter, system-ui, sans-serif';
-      const labelWidth = ctx.measureText(labelText).width + 12;
+      const labelWidth = ctx.measureText(labelText).width + 14;
       
       ctx.beginPath();
       ctx.roundRect(mirroredX - 1, Math.max(2, startY - 24), labelWidth, 20, 6);
@@ -431,20 +499,68 @@ export default function Kiosk() {
                 Faculty Recognized: <span className="text-slate-900 font-bold">{identifiedTeacher.name}</span>
                 <span className="text-slate-400 text-xs font-normal">({identifiedTeacher.department})</span>
               </div>
+
+              {/* Anti-Spoofing Blink Verification Prompt Banner */}
+              <div className={`p-3 rounded-xl border flex flex-col gap-2 transition-all ${
+                isLivenessVerified 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : livenessStatus === 'BLINK_DETECTED'
+                  ? 'bg-amber-50 border-amber-200 text-amber-800 animate-pulse'
+                  : 'bg-indigo-50 border-indigo-200 text-indigo-800 animate-pulse'
+              }`}>
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+                  <div className="flex items-center gap-2 text-left">
+                    {isLivenessVerified ? (
+                      <ShieldCheck size={18} className="text-emerald-600 shrink-0" />
+                    ) : (
+                      <Eye size={18} className="text-indigo-600 shrink-0 animate-bounce" />
+                    )}
+                    <span>{livenessMessage || '👁️ Anti-Spoofing: Please BLINK your eyes once to verify liveness'}</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
+                    isLivenessVerified 
+                      ? 'bg-emerald-600 text-white' 
+                      : 'bg-indigo-600 text-white'
+                  }`}>
+                    {isLivenessVerified ? 'VERIFIED' : 'BLINK REQUIRED'}
+                  </span>
+                </div>
+
+                {/* Live Eye Openness Telemetry Bar */}
+                <div className="w-full bg-slate-200/80 h-1.5 rounded-full overflow-hidden flex items-center">
+                  <div 
+                    className={`h-full transition-all duration-300 ${
+                      isLivenessVerified 
+                        ? 'bg-emerald-500' 
+                        : livenessStatus === 'BLINK_DETECTED'
+                        ? 'bg-amber-500'
+                        : 'bg-indigo-500'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(10, (currentOpennessScore / (peakOpennessRef.current || 1.0)) * 100))}%` }}
+                  ></div>
+                </div>
+              </div>
               
               <button
                 onClick={handleConfirmAttendance}
                 disabled={isConfirming}
-                className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-[1.005] ${
-                  mode === 'CHECK_IN'
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/10'
-                    : 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/10'
+                className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all ${
+                  !isLivenessVerified
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed hover:bg-slate-200'
+                    : mode === 'CHECK_IN'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/10 hover:scale-[1.005]'
+                    : 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/10 hover:scale-[1.005]'
                 }`}
               >
                 {isConfirming ? (
                   <>
                     <RefreshCw size={16} className="animate-spin" />
                     Saving to Database...
+                  </>
+                ) : !isLivenessVerified ? (
+                  <>
+                    <Lock size={16} className="text-slate-400" />
+                    BLINK EYES TO UNLOCK {mode === 'CHECK_IN' ? 'CHECK-IN' : 'CHECK-OUT'}
                   </>
                 ) : (
                   <>

@@ -8,6 +8,7 @@ import uuid
 from app.database import get_db
 from app.models.attendance import AttendanceLog
 from app.models.teacher import Teacher
+from app.models.embedding import TeacherEmbedding
 from app.schemas.attendance import AttendanceLogResponse, AttendanceManualOverride, AttendanceSummary
 from app.schemas.teacher import TeacherResponse
 from app.services.attendance_service import AttendanceService
@@ -170,3 +171,28 @@ async def list_teachers(
     result = await db.execute(stmt)
     teachers = result.scalars().all()
     return teachers
+
+
+@router.delete("/teachers/{teacher_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_teacher(
+    teacher_id: str,
+    db: AsyncSession = Depends(get_db),
+    admin: str = Depends(get_current_admin)
+):
+    """
+    Deletes a registered faculty profile, their 3D embeddings, and attendance records.
+    """
+    stmt = select(Teacher).where(Teacher.teacher_id == teacher_id)
+    res = await db.execute(stmt)
+    teacher = res.scalar_one_or_none()
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Faculty ID '{teacher_id}' not found."
+        )
+
+    # Delete associated embeddings, attendance logs, and teacher profile
+    await db.execute(delete(TeacherEmbedding).where(TeacherEmbedding.teacher_id == teacher_id))
+    await db.execute(delete(AttendanceLog).where(AttendanceLog.teacher_id == teacher_id))
+    await db.execute(delete(Teacher).where(Teacher.teacher_id == teacher_id))
+    await db.commit()

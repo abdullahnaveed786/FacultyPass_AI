@@ -18,8 +18,8 @@ class VisionService:
         # If CUDA is available, use CUDAExecutionProvider, otherwise CPUExecutionProvider
         providers = ['CPUExecutionProvider']
         
-        # We can specify download root so models are cached in a volume
-        download_root = os.environ.get("INSIGHTFACE_MODEL_DIR", "/root/.insightface")
+        # We can specify download root so models are cached in user home directory or custom env path
+        download_root = os.environ.get("INSIGHTFACE_MODEL_DIR", os.path.expanduser("~/.insightface"))
         
         self.app = FaceAnalysis(
             name=name,

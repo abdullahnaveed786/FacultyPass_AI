@@ -6,8 +6,14 @@ export const NotificationProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   const addNotification = useCallback((message, type = 'info', duration = 5000) => {
+    const safeMessage = typeof message === 'string'
+      ? message
+      : typeof message === 'object' && message !== null
+      ? (Array.isArray(message) ? message.map(m => (typeof m === 'object' ? JSON.stringify(m) : String(m))).join('; ') : JSON.stringify(message))
+      : String(message);
+
     const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, message: safeMessage, type }]);
     
     // Auto-remove toast after duration
     setTimeout(() => {

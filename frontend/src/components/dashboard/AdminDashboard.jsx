@@ -151,6 +151,21 @@ export default function AdminDashboard() {
     }
   };
 
+  // Delete Teacher record
+  const handleDeleteTeacher = async (teacherId, name) => {
+    if (!window.confirm(`Are you sure you want to delete faculty profile "${name}" (${teacherId})?\nThis will remove their enrolled 3D face embeddings and attendance records.`)) return;
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.delete(API_URL + '/reports/teachers/' + teacherId, { headers });
+      addNotification(`Faculty member "${name}" deleted successfully.`, 'success');
+      setTeachers(prev => prev.filter(t => t.teacher_id !== teacherId));
+      fetchDashboardData();
+    } catch (err) {
+      console.error(err);
+      addNotification('Failed to delete faculty member.', 'error');
+    }
+  };
+
   // Export logs to CSV
   const exportToCSV = () => {
     if (logs.length === 0) {
@@ -533,19 +548,20 @@ export default function AdminDashboard() {
                     <th className="p-4">Name</th>
                     <th className="p-4">Department</th>
                     <th className="p-4">Status</th>
+                    <th className="p-4 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {isLoading ? (
                     <tr>
-                      <td colSpan="4" className="p-8 text-center text-slate-400">
+                      <td colSpan="5" className="p-8 text-center text-slate-400">
                         <RefreshCw className="animate-spin inline-block mr-2 text-indigo-500" size={16} />
                         Loading registered faculty records...
                       </td>
                     </tr>
                   ) : filteredTeachers.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="p-8 text-center text-slate-400">
+                      <td colSpan="5" className="p-8 text-center text-slate-400">
                         No registered faculty members found.
                       </td>
                     </tr>
@@ -563,6 +579,15 @@ export default function AdminDashboard() {
                           }`}>
                             {t.is_active ? 'ACTIVE' : 'INACTIVE'}
                           </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <button
+                            onClick={() => handleDeleteTeacher(t.teacher_id, t.name)}
+                            className="text-rose-500 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg transition"
+                            title="Delete faculty profile"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </td>
                       </tr>
                     ))

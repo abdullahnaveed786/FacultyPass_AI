@@ -78,8 +78,8 @@ export default function EnrollmentWizard() {
   // Pose configuration
   const POSES = [
     { key: 'FRONT', label: 'Frontal Center', instruction: 'Look directly at the camera, placing the green dot in the center ring.' },
-    { key: 'LEFT', label: 'Look Left', instruction: 'Slowly turn your head from the CENTER to the LEFT, moving the dot to the left target zone.' },
-    { key: 'RIGHT', label: 'Look Right', instruction: 'Slowly turn your head from the CENTER to the RIGHT, moving the dot to the right target zone.' },
+    { key: 'LEFT', label: 'Look Left', instruction: 'Slowly turn your head to place the dot inside the target zone.' },
+    { key: 'RIGHT', label: 'Look Right', instruction: 'Slowly turn your head to place the dot inside the target zone.' },
     { key: 'UP', label: 'Look Up', instruction: 'Slowly tilt your chin from the CENTER UPWARDS, moving the dot to the upper target zone.' },
     { key: 'DOWN', label: 'Look Down', instruction: 'Slowly tilt your chin from the CENTER DOWNWARDS, moving the dot to the lower target zone.' },
   ];
@@ -178,10 +178,10 @@ export default function EnrollmentWizard() {
     let targetLabel = "Look Straight";
 
     if (targetPose === 'LEFT') {
-      targetX = W / 2 - 95; // Move circle to target LEFT
+      targetX = W / 2 + 95; // Physical LEFT moves nose pointer to screen RIGHT on mirrored canvas
       targetLabel = "Turn Left ➔"; 
     } else if (targetPose === 'RIGHT') {
-      targetX = W / 2 + 95; // Move circle to target RIGHT
+      targetX = W / 2 - 95; // Physical RIGHT moves nose pointer to screen LEFT on mirrored canvas
       targetLabel = "◀ Turn Right";
     } else if (targetPose === 'UP') {
       targetY = H / 2 - 70; // Move circle UP
@@ -330,7 +330,7 @@ export default function EnrollmentWizard() {
         setValidationMsg(message);
       }
     } catch (err) {
-      print("Validation error: " + err);
+      console.error("Validation error: ", err);
     }
 
     // Schedule the next frame only if the active pose index has not changed/completed
@@ -369,6 +369,14 @@ export default function EnrollmentWizard() {
   const handleRegisterSubmit = async () => {
     setIsSubmitting(true);
     try {
+      // Validate that all embeddings exist and are non-empty arrays
+      const missingPoses = POSES.filter(pose => !capturedEmbeddings[pose.key] || !Array.isArray(capturedEmbeddings[pose.key]));
+      if (missingPoses.length > 0) {
+        addNotification(`Missing face capture data for: ${missingPoses.map(p => p.label).join(', ')}. Please re-capture.`, 'warning');
+        setIsSubmitting(false);
+        return;
+      }
+
       const embeddingsList = POSES.map(pose => ({
         pose_name: pose.key,
         embedding: capturedEmbeddings[pose.key]
@@ -381,12 +389,22 @@ export default function EnrollmentWizard() {
         embeddings: embeddingsList
       });
 
-      addNotification(`Teacher ${formData.name} registered successfully!`, 'success');
+      addNotification(`Teacher "${formData.name}" registered successfully!`, 'success');
       resetWizard();
     } catch (err) {
-      console.error(err);
-      const detail = err.response?.data?.detail || 'Registration failed.';
-      addNotification(detail, 'error');
+      console.error("Registration submit error:", err);
+      let errorMsg = 'Registration failed.';
+      if (err.response?.data?.detail) {
+        const d = err.response.data.detail;
+        if (typeof d === 'string') {
+          errorMsg = d;
+        } else if (Array.isArray(d)) {
+          errorMsg = d.map(item => item.msg || JSON.stringify(item)).join('; ');
+        } else if (typeof d === 'object') {
+          errorMsg = JSON.stringify(d);
+        }
+      }
+      addNotification(errorMsg, 'error');
     } finally {
       setIsSubmitting(false);
     }
