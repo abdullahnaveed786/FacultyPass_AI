@@ -73,13 +73,14 @@ export default function EnrollmentWizard() {
     teacherId: '',
     name: '',
     department: '',
+    email: '',
   });
 
   // Pose configuration
   const POSES = [
     { key: 'FRONT', label: 'Frontal Center', instruction: 'Look directly at the camera, placing the green dot in the center ring.' },
-    { key: 'LEFT', label: 'Look Left', instruction: 'Slowly turn your head to place the dot inside the target zone.' },
-    { key: 'RIGHT', label: 'Look Right', instruction: 'Slowly turn your head to place the dot inside the target zone.' },
+    { key: 'LEFT', label: 'Look Left', instruction: 'Slowly turn your head from the CENTER to the LEFT, moving the dot to the left target zone.' },
+    { key: 'RIGHT', label: 'Look Right', instruction: 'Slowly turn your head from the CENTER to the RIGHT, moving the dot to the right target zone.' },
     { key: 'UP', label: 'Look Up', instruction: 'Slowly tilt your chin from the CENTER UPWARDS, moving the dot to the upper target zone.' },
     { key: 'DOWN', label: 'Look Down', instruction: 'Slowly tilt your chin from the CENTER DOWNWARDS, moving the dot to the lower target zone.' },
   ];
@@ -104,6 +105,26 @@ export default function EnrollmentWizard() {
 
   // Check if all 5 poses are completely captured and written to state
   const isAllCaptured = Object.keys(capturedEmbeddings).length === POSES.length;
+
+  // Helper to validate university email matching pattern and teacher ID
+  const isEmailValid = (email, teacherId) => {
+    if (!email || !teacherId) return false;
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanId = teacherId.trim().toLowerCase();
+    
+    // Email must end with @ucp.edu.pk
+    if (!cleanEmail.endsWith('@ucp.edu.pk')) return false;
+    
+    // The username part (before @) must match the Teacher ID
+    const parts = cleanEmail.split('@');
+    if (parts.length !== 2) return false;
+    
+    return parts[0] === cleanId;
+  };
+
+  // Determine validation states
+  const showEmailError = formData.email.trim().length > 0 && !isEmailValid(formData.email, formData.teacherId);
+  const isFormInvalid = !formData.teacherId || !formData.name || !formData.department || !formData.email || !isEmailValid(formData.email, formData.teacherId);
 
   // Start webcam
   const startWebcam = async () => {
@@ -413,7 +434,7 @@ export default function EnrollmentWizard() {
   const resetWizard = () => {
     stopWebcam();
     setStep(1);
-    setFormData({ teacherId: '', name: '', department: '' });
+    setFormData({ teacherId: '', name: '', department: '', email: '' });
     setCurrentPoseIdx(0);
     setCapturedEmbeddings({});
     setValidationMsg('Camera initializing...');
@@ -469,16 +490,37 @@ export default function EnrollmentWizard() {
                 className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition"
               />
             </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">University Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="e.g. l1f22bscs0428@ucp.edu.pk"
+                className={`w-full bg-slate-50 border focus:bg-white focus:ring-1 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition ${
+                  showEmailError 
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'
+                }`}
+              />
+              {showEmailError && (
+                <p className="text-red-500 text-[11px] mt-1.5 font-medium leading-relaxed">
+                  Email must be in the format &lt;teacher_id&gt;@ucp.edu.pk and match your Teacher ID.
+                </p>
+              )}
+            </div>
 
             <button
               onClick={() => {
-                if (!formData.teacherId || !formData.name || !formData.department) {
-                  addNotification('Please fill in all details before continuing.', 'warning');
-                  return;
-                }
+                if (isFormInvalid) return;
                 setStep(2);
               }}
-              className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/10"
+              disabled={isFormInvalid}
+              className={`w-full mt-4 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md ${
+                isFormInvalid 
+                  ? 'bg-slate-350 cursor-not-allowed shadow-none'
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10'
+              }`}
             >
               Continue to Biometrics
               <ArrowRight size={18} />
