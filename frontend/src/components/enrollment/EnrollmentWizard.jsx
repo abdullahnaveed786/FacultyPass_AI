@@ -76,6 +76,15 @@ export default function EnrollmentWizard() {
     email: '',
   });
 
+  // OTP flow states
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpCountdown, setOtpCountdown] = useState(600); // 10 minutes (in seconds)
+  const [canResend, setCanResend] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(60); // 60s cooldown limit
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
   // Pose configuration
   const POSES = [
     { key: 'FRONT', label: 'Frontal Center', instruction: 'Look directly at the camera, placing the green dot in the center ring.' },
@@ -106,7 +115,7 @@ export default function EnrollmentWizard() {
   // Check if all 5 poses are completely captured and written to state
   const isAllCaptured = Object.keys(capturedEmbeddings).length === POSES.length;
 
-  // Helper to determine specific validation error messages based on matching rules
+  // Helper to validate university email matching pattern and teacher ID
   const getEmailValidationError = (email, teacherId) => {
     if (!email || email.trim().length === 0) return '';
     const cleanEmail = email.trim().toLowerCase();
@@ -133,8 +142,82 @@ export default function EnrollmentWizard() {
 
   // Determine validation states
   const emailValidationError = getEmailValidationError(formData.email, formData.teacherId);
-  const showEmailError = emailValidationError.length > 0;
-  const isFormInvalid = !formData.teacherId || !formData.name || !formData.department || !formData.email || showEmailError;
+  const showEmailError = formData.email.trim().length > 0 && emailValidationError.length > 0;
+  const isFormInvalid = !formData.teacherId || !formData.name || !formData.department || !formData.email || emailValidationError.length > 0;
+
+  // Handle OTP Expiration Countdown (10 minutes)
+  useEffect(() => {
+    let timer;
+    if (isOtpSent && otpCountdown > 0) {
+      timer = setInterval(() => {
+        setOtpCountdown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isOtpSent, otpCountdown]);
+
+  // Handle OTP Resend Rate Limit Countdown (60 seconds)
+  useEffect(() => {
+    let timer;
+    if (isOtpSent && resendCountdown > 0) {
+      timer = setInterval(() => {
+        setResendCountdown(prev => {
+          if (prev <= 1) {
+            setCanResend(true);
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isOtpSent, resendCountdown]);
+
+  // Call send-otp backend API
+  const handleSendOtp = async () => {
+    setIsSendingOtp(true);
+    try {
+      await axios.post(`${API_URL}/auth/send-otp`, {
+        teacher_id: formData.teacherId,
+        email: formData.email
+      });
+      addNotification('Verification code sent to your email.', 'success');
+      setIsOtpSent(true);
+      setOtpCountdown(600);
+      setResendCountdown(60);
+      setCanResend(false);
+      setOtpCode('');
+    } catch (err) {
+      console.error(err);
+      const detail = err.response?.data?.detail || 'Failed to send verification code. Please try again.';
+      addNotification(detail, 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Call verify-otp backend API
+  const handleVerifyOtp = async () => {
+    if (otpCode.length !== 6) return;
+    setIsVerifyingOtp(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/verify-otp`, {
+        teacher_id: formData.teacherId,
+        otp: otpCode
+      });
+      if (response.data.verified) {
+        addNotification('Email verified successfully! Proceeding to Biometrics.', 'success');
+        setStep(2); // Proceed to Face Capture
+      }
+    } catch (err) {
+      console.error(err);
+      const detail = err.response?.data?.detail || 'Invalid verification code.';
+      addNotification(detail, 'error');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   // Start webcam
   const startWebcam = async () => {
@@ -445,6 +528,11 @@ export default function EnrollmentWizard() {
     stopWebcam();
     setStep(1);
     setFormData({ teacherId: '', name: '', department: '', email: '' });
+    setIsOtpSent(false);
+    setOtpCode('');
+    setOtpCountdown(600);
+    setResendCountdown(60);
+    setCanResend(false);
     setCurrentPoseIdx(0);
     setCapturedEmbeddings({});
     setValidationMsg('Camera initializing...');
@@ -466,7 +554,7 @@ export default function EnrollmentWizard() {
       </div>
 
       {step === 1 ? (
-        /* STEP 1: METADATA FORM */
+        /* STEP 1: METADATA FORM & OTP VERIFICATION */
         <div className="glass-panel p-8 rounded-2xl shadow-md max-w-lg mx-auto bg-white border border-slate-200/80">
           <h3 className="text-base font-bold mb-6 text-slate-800">1. Faculty Details</h3>
           <div className="space-y-5">
@@ -474,40 +562,44 @@ export default function EnrollmentWizard() {
               <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Teacher ID</label>
               <input
                 type="text"
+                disabled={isOtpSent}
                 value={formData.teacherId}
                 onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
                 placeholder="e.g. FAC-101"
-                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition"
+                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">Full Name</label>
               <input
                 type="text"
+                disabled={isOtpSent}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g. Prof. Alan Turing"
-                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition"
+                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-2">Department</label>
               <input
                 type="text"
+                disabled={isOtpSent}
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                 placeholder="e.g. Mathematics"
-                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition"
+                className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-2">University Email</label>
               <input
                 type="email"
+                disabled={isOtpSent}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="e.g. l1f22bscs0428@ucp.edu.pk"
-                className={`w-full bg-slate-50 border focus:bg-white focus:ring-1 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition ${
+                className={`w-full bg-slate-50 border focus:bg-white focus:ring-1 rounded-lg py-2.5 px-4 text-slate-800 placeholder-slate-400 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed ${
                   showEmailError 
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
                     : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'
@@ -520,21 +612,94 @@ export default function EnrollmentWizard() {
               )}
             </div>
 
-            <button
-              onClick={() => {
-                if (isFormInvalid) return;
-                setStep(2);
-              }}
-              disabled={isFormInvalid}
-              className={`w-full mt-4 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md ${
-                isFormInvalid 
-                  ? 'bg-slate-350 cursor-not-allowed shadow-none'
-                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10'
-              }`}
-            >
-              Continue to Biometrics
-              <ArrowRight size={18} />
-            </button>
+            {/* OTP Verification Code Section */}
+            {isOtpSent && (
+              <div className="bg-slate-50 border border-slate-200/80 p-5 rounded-xl space-y-4 animate-fadeIn mt-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                    Enter Verification Code
+                  </label>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Expires in: <span className="font-bold text-indigo-600">{Math.floor(otpCountdown / 60)}:{(otpCountdown % 60).toString().padStart(2, '0')}</span>
+                  </span>
+                </div>
+                
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 123456"
+                    className="flex-1 bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg py-2.5 px-4 text-slate-800 text-center font-bold tracking-widest placeholder-slate-350 outline-none transition"
+                  />
+                  
+                  <button
+                    onClick={handleVerifyOtp}
+                    disabled={otpCode.length !== 6 || isVerifyingOtp || otpCountdown === 0}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-6 rounded-lg transition disabled:opacity-50 shadow-md shadow-indigo-600/10 flex items-center gap-2"
+                  >
+                    {isVerifyingOtp ? (
+                      <RefreshCw size={16} className="animate-spin" />
+                    ) : (
+                      'Verify Code'
+                    )}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <button
+                    onClick={() => setIsOtpSent(false)}
+                    className="text-slate-500 hover:text-indigo-600 font-medium transition"
+                  >
+                    ← Edit details
+                  </button>
+
+                  <button
+                    onClick={handleSendOtp}
+                    disabled={!canResend || isSendingOtp}
+                    className={`font-semibold transition ${
+                      canResend 
+                        ? 'text-indigo-600 hover:text-indigo-700' 
+                        : 'text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {isSendingOtp ? (
+                      'Sending...'
+                    ) : canResend ? (
+                      'Resend Code'
+                    ) : (
+                      `Resend in ${resendCountdown}s`
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Standard "Send Code" Navigation button */}
+            {!isOtpSent && (
+              <button
+                onClick={handleSendOtp}
+                disabled={isFormInvalid || isSendingOtp}
+                className={`w-full mt-4 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md ${
+                  isFormInvalid || isSendingOtp
+                    ? 'bg-slate-350 cursor-not-allowed shadow-none'
+                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10'
+                }`}
+              >
+                {isSendingOtp ? (
+                  <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    Sending Code...
+                  </>
+                ) : (
+                  <>
+                    Send Verification Code
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       ) : (
