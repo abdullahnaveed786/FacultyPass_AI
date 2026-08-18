@@ -106,25 +106,30 @@ export default function EnrollmentWizard() {
   // Check if all 5 poses are completely captured and written to state
   const isAllCaptured = Object.keys(capturedEmbeddings).length === POSES.length;
 
-  // Helper to validate university email matching pattern and teacher ID
-  const isEmailValid = (email, teacherId) => {
-    if (!email || !teacherId) return false;
+  // Helper to determine specific validation error messages based on matching rules
+  const getEmailValidationError = (email, teacherId) => {
+    if (!email || email.trim().length === 0) return '';
     const cleanEmail = email.trim().toLowerCase();
     const cleanId = teacherId.trim().toLowerCase();
     
-    // Email must end with @ucp.edu.pk
-    if (!cleanEmail.endsWith('@ucp.edu.pk')) return false;
+    // 1. Check if email ends with @ucp.edu.pk
+    if (!cleanEmail.endsWith('@ucp.edu.pk')) {
+      return 'Email must be in the format <your_id>@ucp.edu.pk';
+    }
     
-    // The username part (before @) must match the Teacher ID
+    // 2. Check if the username part matches the Teacher ID
     const parts = cleanEmail.split('@');
-    if (parts.length !== 2) return false;
+    if (parts.length !== 2 || parts[0] !== cleanId) {
+      return 'Teacher ID does not match';
+    }
     
-    return parts[0] === cleanId;
+    return '';
   };
 
   // Determine validation states
-  const showEmailError = formData.email.trim().length > 0 && !isEmailValid(formData.email, formData.teacherId);
-  const isFormInvalid = !formData.teacherId || !formData.name || !formData.department || !formData.email || !isEmailValid(formData.email, formData.teacherId);
+  const emailValidationError = getEmailValidationError(formData.email, formData.teacherId);
+  const showEmailError = emailValidationError.length > 0;
+  const isFormInvalid = !formData.teacherId || !formData.name || !formData.department || !formData.email || showEmailError;
 
   // Start webcam
   const startWebcam = async () => {
@@ -505,7 +510,7 @@ export default function EnrollmentWizard() {
               />
               {showEmailError && (
                 <p className="text-red-500 text-[11px] mt-1.5 font-medium leading-relaxed">
-                  Email must be in the format &lt;teacher_id&gt;@ucp.edu.pk and match your Teacher ID.
+                  {emailValidationError}
                 </p>
               )}
             </div>
