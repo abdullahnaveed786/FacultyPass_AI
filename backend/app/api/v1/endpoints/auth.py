@@ -75,22 +75,29 @@ async def send_otp(payload: OTPSendRequest, db: AsyncSession = Depends(get_db)):
     """
     teacher_id = payload.teacher_id.strip()
     email = payload.email.strip().lower()
-    
-    # 1. Validation: Email suffix check
-    if not email.endswith("@ucp.edu.pk"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email must be in the format <your_id>@ucp.edu.pk"
-        )
-    
-    # 2. Validation: Matching local part with teacher_id
-    parts = email.split("@")
-    if len(parts) != 2 or parts[0] != teacher_id.lower():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Teacher ID does not match the email username."
-        )
-    
+    # 1. Validation Checks (Adapted for Sandbox Mode)
+    is_sandbox = settings.RESEND_FROM_EMAIL == "onboarding@resend.dev"
+    if not is_sandbox:
+        # Strict Production Validation
+        if not email.endswith("@ucp.edu.pk"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email must be in the format <your_id>@ucp.edu.pk"
+            )
+        parts = email.split("@")
+        if len(parts) != 2 or parts[0] != teacher_id.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Teacher ID does not match the email username."
+            )
+    else:
+        # Sandbox Mode: Allow @gmail.com bypass for local developers
+        if not (email.endswith("@ucp.edu.pk") or email.endswith("@gmail.com")):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sandbox Mode: Email must end with @ucp.edu.pk or @gmail.com to receive OTP codes."
+            )
+
     # 3. Validation: Verify that the Teacher is not already registered in DB
     stmt = select(Teacher).where(func.lower(Teacher.teacher_id) == teacher_id.lower())
     result = await db.execute(stmt)

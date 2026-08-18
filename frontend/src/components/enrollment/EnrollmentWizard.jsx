@@ -112,6 +112,11 @@ export default function EnrollmentWizard() {
     const cleanEmail = email.trim().toLowerCase();
     const cleanId = teacherId.trim().toLowerCase();
     
+    // Sandbox / local testing bypass: allow standard @gmail.com addresses directly
+    if (cleanEmail.endsWith('@gmail.com')) {
+      return '';
+    }
+    
     // 1. Check if email ends with @ucp.edu.pk
     if (!cleanEmail.endsWith('@ucp.edu.pk')) {
       return 'Email must be in the format <your_id>@ucp.edu.pk';
