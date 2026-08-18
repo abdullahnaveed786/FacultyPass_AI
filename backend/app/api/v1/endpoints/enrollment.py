@@ -11,6 +11,7 @@ from app.schemas.teacher import TeacherRegisterRequest, TeacherResponse
 from app.services.vision_service import vision_service, decode_base64_image
 from app.services.pose_validator import validate_pose_orientation, get_nose_projection
 from app.services.biometric_service import check_biometric_duplicate
+from app.services.attendance_service import redis_client
 import numpy as np
 
 router = APIRouter()
@@ -102,6 +103,15 @@ async def register_teacher(payload: TeacherRegisterRequest, db: AsyncSession = D
     Saves a teacher record and their 5 pose embeddings.
     Triggers a 1:N anti-duplication check against the database using pgvector.
     """
+    # 0. Enforce transient email verification check
+    verification_key = f"verified_email:{payload.teacher_id.lower()}"
+    verified = await redis_client.get(verification_key)
+    if not verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification required before registration."
+        )
+
     # 1. Primary Key Conflict Check
     stmt = select(Teacher).where(Teacher.teacher_id == payload.teacher_id)
     result = await db.execute(stmt)
@@ -144,5 +154,8 @@ async def register_teacher(payload: TeacherRegisterRequest, db: AsyncSession = D
 
     await db.commit()
     await db.refresh(new_teacher)
+
+    # Delete transient email verification pass on successful registration completion
+    await redis_client.delete(verification_key)
 
     return new_teacher

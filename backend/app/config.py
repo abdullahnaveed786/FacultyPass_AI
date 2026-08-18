@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     # Default Admin (Required, no insecure fallbacks)
     ADMIN_USERNAME: str
     ADMIN_PASSWORD: str
+
+    # Resend Email Integration (Required, no insecure fallbacks)
+    RESEND_API_KEY: str
+    RESEND_FROM_EMAIL: str
     
     # Biometric Configurations (Non-sensitive defaults)
     COOLDOWN_SECONDS: int = 900
