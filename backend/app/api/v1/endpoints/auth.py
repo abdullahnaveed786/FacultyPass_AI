@@ -157,16 +157,19 @@ async def send_otp(payload: OTPSendRequest, db: AsyncSession = Depends(get_db)):
                 timeout=10.0
             )
             if response.status_code >= 400:
-                print(f"Resend API Error: {response.status_code} - {response.text}")
+                error_msg = f"Resend API Error ({response.status_code}): {response.text}"
+                print(error_msg)
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to deliver verification code email. Please contact administrator."
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=error_msg
                 )
+    except HTTPException as he:
+        raise he
     except Exception as e:
         print(f"Email delivery error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Verification service currently unavailable. Please try again later."
+            detail=f"Verification service currently unavailable. Connection error: {str(e)}"
         )
         
     return {"success": True, "message": "Verification code sent to your email."}
